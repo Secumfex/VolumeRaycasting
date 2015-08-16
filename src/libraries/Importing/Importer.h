@@ -76,7 +76,7 @@ namespace Importer {
 			for(unsigned int j = 0 ; j < slice.size(); j++)
 			{
 				T val = input[num_bytes_per_entry*j];
-				for (int k = 1; k < num_bytes_per_entry; k++)
+				for (unsigned int k = 1; k < num_bytes_per_entry; k++)
 				{
 						val = (val << 8) + input[ num_bytes_per_entry*j + k];
 				}

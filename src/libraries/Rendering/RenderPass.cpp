@@ -4,11 +4,14 @@ RenderPass::RenderPass(ShaderProgram* shaderProgram, FrameBufferObject* fbo)
 {
 	m_shaderProgram = shaderProgram;
 	m_fbo = fbo;
-	m_viewport = glm::vec4(0,0,0,0);
+	m_viewport = glm::vec4(-1.0f);
 		
 	m_clearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	if (fbo)
 	{
+		m_viewport.x = 0.0f;
+		m_viewport.y = 0.0f;
+		
 		m_viewport.z = (float) fbo->getWidth();
 		m_viewport.w = (float) fbo->getHeight();
 	}
@@ -79,7 +82,10 @@ void RenderPass::render()
 	}
 
 	m_shaderProgram->use();
-	glViewport( (GLint) m_viewport.x, (GLint) m_viewport.y, (GLsizei) m_viewport.z, (GLsizei) m_viewport.w);
+	if (m_viewport != glm::vec4(-1.0f))
+	{
+		glViewport( (GLint) m_viewport.x, (GLint) m_viewport.y, (GLsizei) m_viewport.z, (GLsizei) m_viewport.w);
+	}
 
 	clearBits();
 

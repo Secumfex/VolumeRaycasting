@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include <functional>
+#include <glm/glm.hpp>
 
 GLFWwindow* generateWindow(int width = 1280, int height = 720, int posX = 100, int posY = 100);
 bool shouldClose(GLFWwindow* window);
@@ -21,5 +22,6 @@ void setCursorPosCallback(GLFWwindow* window, std::function<void (double, double
 void setScrollCallback(GLFWwindow* window, std::function<void (double, double)> func);
 void setCursorEnterCallback(GLFWwindow* window, std::function<void (int)> func);
 
-
+glm::vec2 getResolution(GLFWwindow* window);
+float getRatio(GLFWwindow* window);
 #endif

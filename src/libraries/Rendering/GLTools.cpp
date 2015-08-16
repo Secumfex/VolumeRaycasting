@@ -153,3 +153,15 @@ void setCursorEnterCallback(GLFWwindow* window, std::function<void (int)> func) 
 		func_bounce(e);
 	});
 }
+
+glm::vec2 getResolution(GLFWwindow* window) {
+    int w, h;
+    glfwGetFramebufferSize(window, &w, &h);
+    return glm::vec2(float(w), float(h));
+}
+
+float getRatio(GLFWwindow* window) {
+    int w, h;
+    glfwGetFramebufferSize(window, &w, &h);
+    return float(w)/float(h);
+}

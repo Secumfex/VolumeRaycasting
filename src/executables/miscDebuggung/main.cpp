@@ -2,7 +2,11 @@
 
 #include <Rendering/GLTools.h>
 #include <Rendering/VertexArrayObjects.h>
+#include <Rendering/RenderPass.h>
 #include <Importing/Importer.h>
+
+
+#include <glm/gtc/matrix_transform.hpp>
 
 int main()
 {
@@ -67,11 +71,22 @@ int main()
 	// create Cube
 	Cube cube(1.0f, 1.0f, 0.5f);
 
+	// create render pass
+	ShaderProgram shaderProgram("/modelSpace/modelViewProjection.vert", "/modelSpace/simpleColor.frag");
+	shaderProgram.update("model", glm::mat4(1.0f));
+	shaderProgram.update("view", glm::lookAt(glm::vec3(2,2,2), glm::vec3(0), glm::vec3(0,1,0)));
+	shaderProgram.update("projection", glm::perspective(45.f, getRatio(window), 0.1f, 100.f));
+	shaderProgram.update("color", glm::vec4(0.9f, 0.3f, 0.5f, 1.0f));
+
+	RenderPass renderPass(&shaderProgram);
+	renderPass.addClearBit(GL_DEPTH_BUFFER_BIT);
+	renderPass.addClearBit(GL_COLOR_BUFFER_BIT);
+	renderPass.addRenderable(&cube);
+
 	render(window, [&](double dt)
 	{
-
-	}
-	);
+		renderPass.render();
+	});
 
 	destroyWindow(window);
 
