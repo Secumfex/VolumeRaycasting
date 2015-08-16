@@ -22,6 +22,9 @@ struct VolumeData
 	float real_size_x; // actual step size in mm
 	float real_size_y; // acutal step size in mm
 	float real_size_z; // acutal step size in mm
+
+	T min;
+	T max;
 };
 
 namespace Importer {
@@ -35,32 +38,65 @@ namespace Importer {
 	template<typename T>
 	VolumeData<T> load3DData(std::string path, unsigned size_x, unsigned size_y, unsigned int num_files, unsigned int num_bytes_per_entry = 1)
 	{
+		DEBUGLOG->log("Loading files with prefix :" + path);
+		DEBUGLOG->log("Reading slice data");
 
-	std::string current_file_path = path + ".1";
-	
-	std::ifstream file( current_file_path.c_str(), ios::in|ios::binary);
-	
-	std::vector<char> input(1024,0);
+		VolumeData<T> result;
+		result.size_x = size_x;
+		result.size_y = size_y;
+		result.size_z = num_files;
+		result.data.clear();
 
-	if (file.is_open())
-	{
-	    file.seekg(0, ios::beg);
-	    file.getline(&input[0], 1024);
-	}
+		T min = SHRT_MAX;
+		T max = SHRT_MIN;
 
-    std::stringstream stream;    
-    stream << file.rdbuf();
+		DEBUGLOG->indent();
+		for (unsigned int i = 1; i <= num_files; i++)
+		{
+			std::string current_file_path = path + "." + std::to_string(i);
 
-    // Close the file
-    file.close();
-        
-    // Convert the StringStream into a string
-    std::string fileStr = stream.str();
+			std::cout << ".";
 
-    std::cout << fileStr << std::endl;
-	VolumeData<T> result;
-    
-    return result;
+//			DEBUGLOG->log("current file:" + current_file_path);
+
+			// read file into input vector
+			std::ifstream file( current_file_path.c_str(), ios::in|ios::binary);	
+			std::vector<char> input;
+			input.resize(num_bytes_per_entry * size_x * size_y);
+			if (file.is_open())
+			{
+				file.seekg(0, ios::beg);
+				file.getline(&input[0], num_bytes_per_entry * size_x * size_y);
+			}
+			file.close();
+
+			// create data vector for this slice
+			std::vector<T> slice(size_x * size_y, 0);
+
+			for(unsigned int j = 0 ; j < slice.size(); j++)
+			{
+				T val = input[num_bytes_per_entry*j];
+				for (int k = 1; k < num_bytes_per_entry; k++)
+				{
+						val = (val << 8) + input[ num_bytes_per_entry*j + k];
+				}
+	    		
+				slice[j] = val;
+				
+				min = std::min<short>(val, min);
+				max = std::max<short>(val, max);
+			}
+
+			// push slice to data vector
+			result.data.insert(result.data.end(), slice.begin(), slice.end());
+		}
+		std::cout << std::endl;
+		DEBUGLOG->outdent();
+
+		result.min = min;		
+		result.max = max;
+
+		return result;
 	}
 } // namespace Importer
 
