@@ -22,12 +22,18 @@ layout(location = 1) out vec4 fragPosition;
 layout(location = 2) out vec4 fragUVCoord;
 layout(location = 3) out vec4 fragNormal;
 
+struct Sample
+{
+	int value;
+	vec3 uvw;
+};
+
 vec3 samplePos(vec3 start, vec3 direction, float t)
 {
 	return (start + t * direction);
 }
 
-int mip(vec3 startUVW, vec3 endUVW, float stepSize)
+Sample mip(vec3 startUVW, vec3 endUVW, float stepSize)
 {
 	// length of ray in volume from start to end
 	vec3 direction = endUVW - startUVW;
@@ -37,6 +43,7 @@ int mip(vec3 startUVW, vec3 endUVW, float stepSize)
 	int steps = max( int( rayLength / stepSize), 1);
 
 	int maxVal = -4000;
+	vec3 maxUVW = startUVW;
 
 	// cast ray and perform mip
 	for (int i = 0; i < steps; i++)
@@ -44,15 +51,25 @@ int mip(vec3 startUVW, vec3 endUVW, float stepSize)
 		vec3 curUVW = samplePos(startUVW, direction, float(i) * stepSize);
 		int  curVal = texture(volume_texture, curUVW).r;
 
-		maxVal = max( maxVal, curVal );
+		if ( curVal > maxVal)
+		{
+			maxVal = curVal;
+			maxUVW = curUVW;
+		}		
 	}
 
-	return maxVal;
+	Sample result;
+	result.value = maxVal;
+	result.uvw = maxUVW;
+
+	return result;
 }
 
-vec4 transferFunction( int value )
+vec4 transferFunction( int value, float distance )
 {
-	return vec4( (float( value ) - uMinVal) / uRange );
+	vec4 color = vec4( (float( value ) - uMinVal) / uRange );
+
+	return color; 
 }
 
 void main()
@@ -63,10 +80,13 @@ void main()
 
 	// value received for a maximum intensity projection 
 	// from start to end point in volume using step size for ray sampling
-	int maxVal = mip( uvwStart, uvwEnd, uStepSize );
-	
+	Sample maxSample = mip( uvwStart, uvwEnd, uStepSize );
+
+	// TODO
+	float distanceToCamera = 0.0f;
+
 	// compute fragment color
-	vec4 color = transferFunction( maxVal );
+	vec4 color = transferFunction( maxSample.value, distanceToCamera);
 
 	fragColor = vec4(color.rgb, 1.0);
 
