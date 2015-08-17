@@ -68,7 +68,7 @@ void FrameBufferObject::addColorAttachments(int amount)
 	glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColorAttachments);
 	if ( m_numColorAttachments + amount <=  maxColorAttachments)
 	{
-		DEBUGLOG->log("max color attachments: ", maxColorAttachments);
+//		DEBUGLOG->log("max color attachments: ", maxColorAttachments);
 		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferHandle);
 
 		DEBUGLOG->log("Creating Color Attachments: ", amount);

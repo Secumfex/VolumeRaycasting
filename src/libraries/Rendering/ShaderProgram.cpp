@@ -133,10 +133,12 @@ void ShaderProgram::readOutputs(Shader& fragmentShader)
 
 	// take note that outputs are assumed to be in order of appearance. 
 	// optional layout modifiers are not considered
+	DEBUGLOG->log("Shader outputs: ", m_bufferMap.size()); DEBUGLOG->indent();
 	for (auto entry : m_bufferMap)
 	{
-		DEBUGLOG->log("Output " + std::to_string(entry.second) +": " + entry.first);
-	}
+		DEBUGLOG->log(std::to_string(entry.second) +": " + entry.first);
+	} 
+	DEBUGLOG->outdent();
 
 }
 
@@ -145,8 +147,7 @@ void ShaderProgram::readUniforms()
 	GLint numUniforms = -1;
 	glGetProgramiv(getShaderProgramHandle(), GL_ACTIVE_UNIFORMS, &numUniforms);
 
-	DEBUGLOG->log("Number of uniforms " +  std::to_string(numUniforms));
-
+	DEBUGLOG->log("Number of uniforms ", numUniforms);	DEBUGLOG->indent();
 	for (int i = 0; i < numUniforms; i++)
 	{
 		//passive variables for glGetActiveUniform
@@ -159,8 +160,9 @@ void ShaderProgram::readUniforms()
 		uniformName[nameLength] = 0;
 		//add uniform variable to map
 		m_uniformMap[uniformName] = glGetUniformLocation(getShaderProgramHandle(), uniformName);
-		DEBUGLOG->log("Uniform added " + std::to_string(i) +  " : " + uniformName);
+		DEBUGLOG->log(std::to_string(i) +  " : " + uniformName);
 	}
+	DEBUGLOG->outdent();
 }
 
 void ShaderProgram::attachShader(Shader shader)

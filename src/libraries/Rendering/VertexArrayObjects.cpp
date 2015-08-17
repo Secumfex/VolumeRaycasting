@@ -92,23 +92,23 @@ void Volume::generateBuffers(float size_x, float size_y, float size_z)
 
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandles[0]);
     float positions[] = {
-		        -size_x,-size_y,size_z, size_x,-size_y,size_z, size_x,size_y,size_z,
-		        size_x,size_y,size_z, -size_x,size_y,size_z, -size_x,-size_y,size_z,
+		        -size_x,-size_y,size_z,  size_x,-size_y,size_z,  size_x, size_y,size_z,
+		        size_x,  size_y,size_z, -size_x, size_y,size_z, -size_x,-size_y,size_z,
 		        // Right face
-		        size_x,-size_y,size_z, size_x,-size_y,-size_z, size_x,size_y,-size_z,
-		        size_x,size_y,-size_z, size_x,size_y,size_z, size_x,-size_y,size_z,
+		        size_x,-size_y, size_z, size_x,-size_y,-size_z, size_x, size_y,-size_z,
+		        size_x, size_y,-size_z, size_x, size_y, size_z, size_x,-size_y, size_z,
 		        // Back face
-		        -size_x,-size_y,-size_z, size_x,-size_y,-size_z, size_x,size_y,-size_z,
-		        size_x,size_y,-size_z, -size_x,size_y,-size_z, -size_x,-size_y,-size_z,
+		        -size_x,-size_y,-size_z,  size_x, size_y,-size_z, size_x,-size_y,-size_z,  
+		         size_x, size_y,-size_z, -size_x,-size_y,-size_z, -size_x, size_y,-size_z, 
 		        // Left face
-		        -size_x,-size_y,size_z, -size_x,-size_y,-size_z, -size_x,size_y,-size_z,
-		        -size_x,size_y,-size_z, -size_x,size_y,size_z, -size_x,-size_y,size_z,
+		        -size_x,-size_y, size_z, -size_x, size_y,-size_z, -size_x,-size_y,-size_z, 
+		        -size_x, size_y,-size_z, -size_x,-size_y, size_z, -size_x, size_y, size_z,
 		        // Bottom face
-		        -size_x,-size_y,size_z, size_x,-size_y,size_z, size_x,-size_y,-size_z,
-		        size_x,-size_y,-size_z, -size_x,-size_y,-size_z, -size_x,-size_y,size_z,
+		        -size_x,-size_y, size_z, size_x,-size_y,-size_z, size_x,-size_y, size_z,
+		         size_x,-size_y,-size_z, -size_x,-size_y, size_z, -size_x,-size_y,-size_z, 
 		        // Top Face
-		        -size_x,size_y,size_z, size_x,size_y,size_z, size_x,size_y,-size_z,
-		        size_x,size_y,-size_z, -size_x,size_y,-size_z, -size_x,size_y,size_z,
+		        -size_x,size_y, size_z,  size_x,size_y, size_z,  size_x,size_y,-size_z,
+		         size_x,size_y,-size_z, -size_x,size_y,-size_z, -size_x,size_y, size_z,
     };
     glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -117,27 +117,27 @@ void Volume::generateBuffers(float size_x, float size_y, float size_z)
 
     GLfloat uvCoordinates[] = {
         // Front face
-        0,0, 1,0, 1,1,
-        1,1, 0,1, 0,0,
+        0,0,0, 1,0,0, 1,0,1,
+        1,0,1, 0,0,1, 0,0,0,
         // Right face
-        0,0, 1,0, 1,1,
-        1,1, 0,1, 0,0,
+        1,0,0, 1,1,0, 1,1,1,
+        1,1,1, 1,0,1, 1,0,0,
         // Back face
-        0,0, 1,0, 1,1,
-        1,1, 0,1, 0,0,
+        0,1,0, 1,1,1, 1,1,0,
+        1,1,1, 0,1,0, 0,1,1,
         // Left face
-        0,0, 1,0, 1,1,
-        1,1, 0,1, 0,0,
+        0,0,0, 0,1,1, 0,1,0,
+        0,1,1, 0,0,0, 0,0,1,
         // Bottom face
-        0,0, 1,0, 1,1,
-        1,1, 0,1, 0,0,
+        0,0,0, 1,1,0, 1,0,0,
+        1,1,0, 0,0,0, 0,1,0, 
         // Top face
-        0,0, 1,0, 1,1,
-        1,1, 0,1, 0,0,
+        0,0,1, 1,0,1, 1,1,1,
+        1,1,1, 0,1,1, 0,0,1
     };
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandles[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(uvCoordinates), uvCoordinates, GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
     m_uvs.m_size = sizeof(uvCoordinates);
 
