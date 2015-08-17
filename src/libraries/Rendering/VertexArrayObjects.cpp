@@ -76,7 +76,7 @@ void Renderable::setDrawMode(GLenum type)
     m_mode = type;
 }
 
-void Cube::generateBuffers(float size_x, float size_y, float size_z)
+void Volume::generateBuffers(float size_x, float size_y, float size_z)
 {
 	m_mode = GL_TRIANGLES;
 
@@ -199,17 +199,17 @@ void Cube::generateBuffers(float size_x, float size_y, float size_z)
     m_normals.m_size = sizeof(normals);
 }
 
-Cube::Cube(float size)
+Volume::Volume(float size)
 {
 	generateBuffers(size, size, size);
 }
 
-Cube::Cube(float size_x, float size_y, float size_z)
+Volume::Volume(float size_x, float size_y, float size_z)
 {
 	generateBuffers(size_x, size_y, size_z);
 }
 
-Cube::~Cube()
+Volume::~Volume()
 {
 	std::vector<GLuint> buffers;
 	buffers.push_back(m_positions.m_vboHandle);
@@ -219,7 +219,7 @@ Cube::~Cube()
 	glDeleteBuffersARB(3, &buffers[0]);
 }
 
-void Cube::draw()
+void Volume::draw()
 {
     glBindVertexArray(m_vao);
     glDrawArrays(m_mode, 0, 36);

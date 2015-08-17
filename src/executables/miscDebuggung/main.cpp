@@ -69,8 +69,8 @@ int main()
 
 	checkGLError(true);
 	
-	// create Cube
-	Cube cube(1.0f, 1.0f, 0.5f);
+	// create Volume
+	Volume volume(1.0f, 1.0f, 0.5f);
 
 	// create render pass
 	ShaderProgram shaderProgram("/modelSpace/modelViewProjection.vert", "/modelSpace/volume.frag");
@@ -86,7 +86,7 @@ int main()
 	RenderPass renderPass(&shaderProgram);
 	renderPass.addClearBit(GL_DEPTH_BUFFER_BIT);
 	renderPass.addClearBit(GL_COLOR_BUFFER_BIT);
-	renderPass.addRenderable(&cube);
+	renderPass.addRenderable(&volume);
 
 	double time = 0.0f;
 

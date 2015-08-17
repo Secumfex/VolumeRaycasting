@@ -46,14 +46,14 @@ public:
 };
 
 
-class Cube : public Renderable {
+class Volume : public Renderable {
 private: 
 	void generateBuffers(float size_x, float size_y, float size_z);
 public:
-	Cube(float size = 1.0f);
-	Cube(float size_x, float size_y, float size_z);
+	Volume(float size = 1.0f);
+	Volume(float size_x, float size_y, float size_z);
 
-	~Cube();
+	~Volume();
 
 	void draw() override;
 };
