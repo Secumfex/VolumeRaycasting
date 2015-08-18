@@ -13,7 +13,7 @@ include_directories(
     ${GLEW_INCLUDE_PATH}
     ${GLFW3_INCLUDE_PATH}
     ${GLM_INCLUDE_PATH}
-    ${IMGUI_INCLUDE_PATH}
+#    ${IMGUI_INCLUDE_PATH}
     ${EXTERNAL_LIBRARY_PATHS}
     ${LIBRARIES_PATH}
 )
@@ -34,7 +34,7 @@ target_link_libraries(
     ${ALL_LIBRARIES}
     ${GLFW3_LIBRARIES}
     ${GLEW_LIBRARIES}
-    ${IMGUI_LIBARRIES}
+#    ${IMGUI_LIBARRIES}
     ${OpenGL3_LIBRARIES}
 )
 

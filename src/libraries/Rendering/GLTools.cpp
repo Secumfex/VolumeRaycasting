@@ -1,28 +1,35 @@
 #include "GLTools.h"
 
-#include "Core/DebugLog.h"
+static bool g_initialized = false;
 
 GLFWwindow* generateWindow(int width, int height, int posX, int posY) {
+	if (g_initialized == false)
+	{
+		glfwInit();
+		#ifdef __APPLE__
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+		glewExperimental = GL_TRUE;
+		#endif
+
+	}
 	
-	glfwInit();
-	#ifdef __APPLE__
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    glewExperimental = GL_TRUE;
-    #endif
-
 	GLFWwindow* window = glfwCreateWindow(width, height, "OpenGL Window", NULL, NULL);
 	glfwSetWindowPos(window, posX, posY);
 	glfwSetWindowSize(window, width, height);
 	glfwMakeContextCurrent(window);
 
-	glewInit();
-
-	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_DEPTH_TEST);
+	if (g_initialized == false)
+	{
+		glewInit();
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_DEPTH_TEST);
+		
+		g_initialized = true;
+	}
 
 //	registerDefaultGLFWCallbacks(window);
 

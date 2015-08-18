@@ -3,8 +3,9 @@
 #include <Rendering/GLTools.h>
 #include <Rendering/VertexArrayObjects.h>
 #include <Rendering/RenderPass.h>
-#include <Importing/Importer.h>
 
+#include "UI/imgui/imgui.h"
+#include <UI/imguiTools.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -12,12 +13,17 @@ int main()
 {
 	DEBUGLOG->setAutoPrint(true);
 
+	//////////////////////////////////////////////////////////////////////////////
+	/////////////////////// VOLUME DATA LOADING //////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
+
 	std::string file = RESOURCES_PATH;
 	file += std::string( "/CTHead/CThead");
 
 	// load data
-	VolumeData<short> volumeData = Importer::load3DData<short>(file, 256, 256, 113, 2);
-	
+//	VolumeData<short> volumeData = Importer::load3DData<short>(file, 256, 256, 113, 2);
+	VolumeData<short> volumeData = Importer::loadBruder();
+
 	DEBUGLOG->log("File Info:");
 	DEBUGLOG->indent();
 		DEBUGLOG->log("min value: ", volumeData.min);
@@ -27,53 +33,26 @@ int main()
 	auto window = generateWindow(600,600);
 
 	// load into 3d texture
-	GLuint volumeTexture;
-	glEnable(GL_TEXTURE_3D);
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &volumeTexture);
-    glBindTexture(GL_TEXTURE_3D, volumeTexture);
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP);
-
-	// allocate GPU memory
-	glTexStorage3D(GL_TEXTURE_3D
-		, 1
-		, GL_R16I
-		, volumeData.size_x
-		, volumeData.size_y
-		, volumeData.size_z
-	);
-
-	// upload data
-	glTexSubImage3D(GL_TEXTURE_3D
-		, 0
-		, 0
-		, 0
-		, 0
-		, volumeData.size_x
-		, volumeData.size_y
-		, volumeData.size_z
-		, GL_RED_INTEGER
-		, GL_SHORT
-		, &(volumeData.data[0])
-	);
+	DEBUGLOG->log("Loading Volume Data to 3D-Texture.");
+	GLuint volumeTexture = loadTo3DTexture<short>(volumeData);
 
 	DEBUGLOG->log("OpenGL error state after 3D-Texture creation: ");
 	DEBUGLOG->indent(); checkGLError(true); DEBUGLOG->outdent();
+
+
+	//////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////// RENDERING  ///////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
 	
 	// scene/view settings
 	glm::mat4 model = glm::mat4(1.0f);
-	model[1] = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f);
+//	model[1] = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f); // flip y
 	glm::mat4 view = glm::lookAt(glm::vec3(2,2,2), glm::vec3(0), glm::vec3(0,1,0));
 	// glm::mat4 perspective = glm::perspective(45.f, getRatio(window), 0.1f, 100.f);
-	glm::mat4 perspective = glm::ortho(-1.5f, 1.5f, -1.5f, 1.5f, -1.0f, 10.0f);
+	glm::mat4 perspective = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, -1.0f, 10.0f);
 
 	// create Volume
-	Volume volume(1.0f, 1.0f, 1.0f);
+	Volume volume(1.0f, 1.0f, 1.26315f);
 
 	// create renderpass for UV maps
 	DEBUGLOG->log("Shader Compilation: volume uvw coords"); DEBUGLOG->indent();
@@ -102,6 +81,9 @@ int main()
 	
 	shaderProgram.update("uMinVal", (float) volumeData.min);
 	shaderProgram.update("uRange", (float) volumeData.max - (float) volumeData.min);
+
+	//shaderProgram.update("uMinVal", (float) 0);
+	//shaderProgram.update("uRange", (float) 5972;
 	shaderProgram.update("uStepSize", 1.0f / (2.0f * volumeData.size_x));
 		
 	// bind volume texture, front uvws, back uvw textures
@@ -122,20 +104,46 @@ int main()
 	renderPass.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	renderPass.addRenderable(&volume);
 
+	//////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////     GUI      ////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
+
+	// Setup ImGui binding
+    ImGui_ImplGlfwGL3_Init(window, true);
+    bool show_test_window = true;
+
+	//////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////// RENDER LOOP /////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
+
 	double time = 0.0;
 	render(window, [&](double dt)
 	{
+		////////////////////////////////     GUI      ////////////////////////////////
+		static float f = volumeData.min;
+        ImGuiIO& io = ImGui::GetIO();
+		ImGui_ImplGlfwGL3_NewFrame();
+		ImGui::SliderFloat("float", &f, volumeData.min, volumeData.max);
+        //////////////////////////////////////////////////////////////////////////////
+		
+		////////////////////////////////  SHADER //// ////////////////////////////////
 		time += dt;
 		glm::vec4 eye = glm::rotate(glm::mat4(), (float) time, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(2.5f, 0.5f, 2.5f, 1.0f);
 		view = glm::lookAt(glm::vec3(eye), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
+		// update view direction
 		shaderProgram.update("view", view);
 		uvwShaderProgram.update("view", view);
+
+		shaderProgram.update("uMinVal", f);
+		shaderProgram.update("uRange", volumeData.max - f);
 
 		// render front and back uvr positions
 		uvwRenderPass.render();
 
 		renderPass.render();
+
+		ImGui::Render();
 	});
 
 	destroyWindow(window);

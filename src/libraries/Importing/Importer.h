@@ -118,6 +118,8 @@ namespace Importer {
 
 		return result;
 	}
+
+	VolumeData<short> loadBruder();
 } // namespace Importer
 
 #endif
