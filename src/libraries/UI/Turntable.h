@@ -15,11 +15,9 @@ public:
 	virtual ~Turntable();
 
 	inline glm::mat4 getRotationMatrix(){ return m_rotation; }
-
-	void setDragActive(bool drag);
-	bool getDragActive();
-
-	void setSensitivity(float sensitivity);
+	inline void setDragActive(bool drag){m_dragActive = drag;}
+	inline bool getDragActive(){return m_dragActive;}
+	inline void setSensitivity(float sensitivity){m_sensitivity = sensitivity;}
 
 	void dragBy(float phi, float theta, glm::mat4& view = glm::mat4(1.0f));
 };

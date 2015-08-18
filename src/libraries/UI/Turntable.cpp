@@ -3,30 +3,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 Turntable::Turntable(float sensitivity)
+	: m_rotation(1.0f),
+	m_dragActive(false),
+	m_sensitivity(sensitivity)
 {
-	m_rotation = glm::mat4(1.0f);
-	m_dragActive = false;
-	m_sensitivity = sensitivity;
 }
 
 Turntable::~Turntable()
 {
 
-}
-
-void Turntable::setDragActive(bool drag)
-{
-	m_dragActive = drag;
-}
-
-bool Turntable::getDragActive()
-{
-	return m_dragActive;
-}
-
-void Turntable::setSensitivity(float sensitivity)
-{
-	m_sensitivity = sensitivity;
 }
 
 void Turntable::dragBy(float phi, float theta, glm::mat4& view)

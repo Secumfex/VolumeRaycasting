@@ -29,9 +29,13 @@ int main()
 	DEBUGLOG->indent();
 		DEBUGLOG->log("min value: ", volumeData.min);
 		DEBUGLOG->log("max value: ", volumeData.max);
+		DEBUGLOG->log("res. x   : ", volumeData.size_x);
+		DEBUGLOG->log("res. y   : ", volumeData.size_y);
+		DEBUGLOG->log("res. z   : ", volumeData.size_z);
 	DEBUGLOG->outdent();
+
 	// create window and opengl context
-	auto window = generateWindow(600,600);
+	auto window = generateWindow(800,800);
 
 	// load into 3d texture
 	DEBUGLOG->log("Loading Volume Data to 3D-Texture.");
@@ -49,7 +53,8 @@ int main()
 	glm::mat4 model = glm::mat4(1.0f);
 //	model[1] = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f); // flip y
 	glm::vec4 eye(2.5f, 0.5f, 2.5f, 1.0f);
-	glm::mat4 view = glm::lookAt(glm::vec3(eye), glm::vec3(0), glm::vec3(0,1,0));
+	glm::vec4 center(0.0f,0.0f,0.0f,1.0f);
+	glm::mat4 view = glm::lookAt(glm::vec3(eye), glm::vec3(center), glm::vec3(0,1,0));
 
 	// glm::mat4 perspective = glm::perspective(45.f, getRatio(window), 0.1f, 100.f);
 	glm::mat4 perspective = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, -1.0f, 10.0f);
@@ -85,8 +90,6 @@ int main()
 	shaderProgram.update("uMinVal", (float) volumeData.min);
 	shaderProgram.update("uRange", (float) volumeData.max - (float) volumeData.min);
 
-	//shaderProgram.update("uMinVal", (float) 0);
-	//shaderProgram.update("uRange", (float) 5972;
 	shaderProgram.update("uStepSize", 1.0f / (2.0f * volumeData.size_x));
 		
 	// bind volume texture, front uvws, back uvw textures
@@ -152,8 +155,36 @@ int main()
 		ImGui_ImplGlfwGL3_MouseButtonCallback(window, b, a, m);
 	};
 
+	auto keyboardCB = [&](int k, int s, int a, int m)
+	{
+		if (a == GLFW_RELEASE) {return;} 
+		switch (k)
+		{
+			case GLFW_KEY_W:
+				eye += glm::inverse(view)    * glm::vec4(0.0f,0.0f,0.1f,0.0f);
+				center += glm::inverse(view) * glm::vec4(0.0f,0.0f,0.1f,0.0f);
+				break;
+			case GLFW_KEY_A:
+				eye += glm::inverse(view)	 * glm::vec4(-0.1f,0.0f,0.0f,0.0f);
+				center += glm::inverse(view) * glm::vec4(-0.1f,0.0f,0.0f,0.0f);
+				break;
+			case GLFW_KEY_S:
+				eye += glm::inverse(view)    * glm::vec4(0.0f,0.0f,-0.1f,0.0f);
+				center += glm::inverse(view) * glm::vec4(0.0f,0.0f,-0.1f,0.0f);
+				break;
+			case GLFW_KEY_D:
+				eye += glm::inverse(view)    * glm::vec4(0.1f,0.0f,0.0f,0.0f);
+				center += glm::inverse(view) * glm::vec4(0.1f,0.0f,0.0f,0.0f);
+				break;
+			default:
+				break;
+		}
+		ImGui_ImplGlfwGL3_KeyCallback(window,k,s,a,m);
+	};
+
 	setCursorPosCallback(window, cursorPosCB);
 	setMouseButtonCallback(window, mouseButtonCB);
+	setKeyCallback(window, keyboardCB);
 
 	//////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////// RENDER LOOP /////////////////////////////////
@@ -167,12 +198,12 @@ int main()
 		glfwSetWindowTitle(window, window_header.c_str() );
 
 		////////////////////////////////     GUI      ////////////////////////////////
-		static float f = volumeData.min;
+		static float minValue = volumeData.min;
 		static bool isRotating = true;
         ImGuiIO& io = ImGui::GetIO();
 		ImGui_ImplGlfwGL3_NewFrame(); // tell ImGui a new frame is being rendered
 		// debug interface
-		ImGui::SliderFloat("min. value", &f, volumeData.min, volumeData.max);
+		ImGui::SliderFloat("min. value", &minValue, volumeData.min, volumeData.max);
 		ImGui::Checkbox("auto-rotate", &isRotating);
         //////////////////////////////////////////////////////////////////////////////
 		
@@ -181,7 +212,7 @@ int main()
 		{
 			eye = glm::rotate(glm::mat4(1.0f), (float) dt, glm::vec3(0.0f, 1.0f, 0.0f) ) * eye;
 		}
-		view = glm::lookAt(glm::vec3(eye), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		view = glm::lookAt(glm::vec3(eye), glm::vec3(center), glm::vec3(0.0f, 1.0f, 0.0f));
 
 		// update uniforms
 		shaderProgram.update(   "view", view);
@@ -189,8 +220,8 @@ int main()
 		shaderProgram.update(   "model", turntable.getRotationMatrix() * model);
 		uvwShaderProgram.update("model", turntable.getRotationMatrix() * model);
 
-		shaderProgram.update("uMinVal", f);
-		shaderProgram.update("uRange", volumeData.max - f);
+		shaderProgram.update("uMinVal", minValue);
+		shaderProgram.update("uRange", volumeData.max - minValue);
 		//////////////////////////////////////////////////////////////////////////////
 		
 		////////////////////////////////  RENDERING //// /////////////////////////////

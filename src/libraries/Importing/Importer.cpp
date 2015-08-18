@@ -54,6 +54,7 @@ VolumeData<short> Importer::loadBruder()
 
 			i++;
 		}
+		std::cout << std::endl;
 
 		file.close();
 	}
