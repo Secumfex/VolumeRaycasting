@@ -6,6 +6,7 @@
 
 #include "UI/imgui/imgui.h"
 #include <UI/imguiTools.h>
+#include <UI/Turntable.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -105,12 +106,52 @@ int main()
 	renderPass.addRenderable(&volume);
 
 	//////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////     GUI      ////////////////////////////////
+	///////////////////////    GUI / USER INPUT   ////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////
 
 	// Setup ImGui binding
     ImGui_ImplGlfwGL3_Init(window, true);
     bool show_test_window = true;
+
+	Turntable turntable;
+	double old_x;
+    double old_y;
+	glfwGetCursorPos(window, &old_x, &old_y);
+	
+	auto cursorPosCB = [&](double x, double y)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		if ( io.WantCaptureMouse )
+		{ return; } // ImGUI is handling this
+
+		double d_x = x - old_x;
+		double d_y = y - old_y;
+
+		if ( turntable.getDragActive() )
+		{
+			turntable.dragBy(d_x, d_y, view);
+		}
+
+		old_x = x;
+		old_y = y;
+	};
+
+	auto mouseButtonCB = [&](int b, int a, int m)
+	{
+		if (b == GLFW_MOUSE_BUTTON_LEFT && a == GLFW_PRESS)
+		{
+			turntable.setDragActive(true);
+		}
+		if (b == GLFW_MOUSE_BUTTON_LEFT && a == GLFW_RELEASE)
+		{
+			turntable.setDragActive(false);
+		}
+
+		ImGui_ImplGlfwGL3_MouseButtonCallback(window, b, a, m);
+	};
+
+	setCursorPosCallback(window, cursorPosCB);
+	setMouseButtonCallback(window, mouseButtonCB);
 
 	//////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////// RENDER LOOP /////////////////////////////////
@@ -121,29 +162,38 @@ int main()
 	{
 		////////////////////////////////     GUI      ////////////////////////////////
 		static float f = volumeData.min;
+		static bool isRotating = true;
         ImGuiIO& io = ImGui::GetIO();
 		ImGui_ImplGlfwGL3_NewFrame();
-		ImGui::SliderFloat("float", &f, volumeData.min, volumeData.max);
+		ImGui::SliderFloat("min. value", &f, volumeData.min, volumeData.max);
+		ImGui::Checkbox("auto-rotate", &isRotating);
         //////////////////////////////////////////////////////////////////////////////
 		
 		////////////////////////////////  SHADER //// ////////////////////////////////
 		time += dt;
-		glm::vec4 eye = glm::rotate(glm::mat4(), (float) time, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(2.5f, 0.5f, 2.5f, 1.0f);
+		static glm::vec4 eye(2.5f, 0.5f, 2.5f, 1.0f);
+		if (isRotating)
+		{
+			eye = glm::rotate(glm::mat4(1.0f), (float) dt, glm::vec3(0.0f, 1.0f, 0.0f) ) * eye;
+		}
 		view = glm::lookAt(glm::vec3(eye), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 		// update view direction
-		shaderProgram.update("view", view);
+		shaderProgram.update(   "view", view);
 		uvwShaderProgram.update("view", view);
+		shaderProgram.update(   "model", turntable.getRotationMatrix() * model);
+		uvwShaderProgram.update("model", turntable.getRotationMatrix() * model);
 
 		shaderProgram.update("uMinVal", f);
 		shaderProgram.update("uRange", volumeData.max - f);
-
-		// render front and back uvr positions
+		//////////////////////////////////////////////////////////////////////////////
+		
+		////////////////////////////////  RENDERING //// /////////////////////////////
 		uvwRenderPass.render();
-
 		renderPass.render();
-
 		ImGui::Render();
+		//////////////////////////////////////////////////////////////////////////////
+
 	});
 
 	destroyWindow(window);
