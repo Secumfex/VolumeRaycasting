@@ -48,7 +48,9 @@ int main()
 	// scene/view settings
 	glm::mat4 model = glm::mat4(1.0f);
 //	model[1] = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f); // flip y
-	glm::mat4 view = glm::lookAt(glm::vec3(2,2,2), glm::vec3(0), glm::vec3(0,1,0));
+	glm::vec4 eye(2.5f, 0.5f, 2.5f, 1.0f);
+	glm::mat4 view = glm::lookAt(glm::vec3(eye), glm::vec3(0), glm::vec3(0,1,0));
+
 	// glm::mat4 perspective = glm::perspective(45.f, getRatio(window), 0.1f, 100.f);
 	glm::mat4 perspective = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, -1.0f, 10.0f);
 
@@ -157,28 +159,31 @@ int main()
 	//////////////////////////////// RENDER LOOP /////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////
 
-	double time = 0.0;
+	double elapsedTime = 0.0;
 	render(window, [&](double dt)
 	{
+		elapsedTime += dt;
+		std::string window_header = "Volume Renderer - " + std::to_string( 1.0 / dt ) + " FPS";
+		glfwSetWindowTitle(window, window_header.c_str() );
+
 		////////////////////////////////     GUI      ////////////////////////////////
 		static float f = volumeData.min;
 		static bool isRotating = true;
         ImGuiIO& io = ImGui::GetIO();
-		ImGui_ImplGlfwGL3_NewFrame();
+		ImGui_ImplGlfwGL3_NewFrame(); // tell ImGui a new frame is being rendered
+		// debug interface
 		ImGui::SliderFloat("min. value", &f, volumeData.min, volumeData.max);
 		ImGui::Checkbox("auto-rotate", &isRotating);
         //////////////////////////////////////////////////////////////////////////////
 		
-		////////////////////////////////  SHADER //// ////////////////////////////////
-		time += dt;
-		static glm::vec4 eye(2.5f, 0.5f, 2.5f, 1.0f);
+		///////////////////////////  SHADER UPDATING /////////////////////////////////
 		if (isRotating)
 		{
 			eye = glm::rotate(glm::mat4(1.0f), (float) dt, glm::vec3(0.0f, 1.0f, 0.0f) ) * eye;
 		}
 		view = glm::lookAt(glm::vec3(eye), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-		// update view direction
+		// update uniforms
 		shaderProgram.update(   "view", view);
 		uvwShaderProgram.update("view", view);
 		shaderProgram.update(   "model", turntable.getRotationMatrix() * model);
