@@ -15,6 +15,8 @@ uniform isampler3D volume_texture;
 uniform float uRange;
 uniform float uMinVal;
 uniform float uStepSize;
+uniform vec4 uMaxDistColor;
+uniform vec4 uMinDistColor;
 
 // out-variables
 layout(location = 0) out vec4 fragColor;
@@ -65,9 +67,22 @@ Sample mip(vec3 startUVW, vec3 endUVW, float stepSize)
 	return result;
 }
 
-vec4 transferFunction( int value, float distance )
+float contrastFalloffQuadratic(float relVal, float dist)
+{	
+	float quadrDist = dist*dist;
+	return  0.5 * quadrDist + relVal * (1.0 - quadrDist);
+}
+
+float contrastFalloffLinear(float relVal, float dist)
+{	
+	return  0.5 * dist + relVal * (1.0 - dist);
+}
+
+vec4 transferFunction( int value, float distanceToCamera )
 {
 	vec4 color = vec4( (float( value ) - uMinVal) / uRange );
+
+	color = color * ( (1.0 - distanceToCamera) * uMinDistColor + (distanceToCamera) * uMaxDistColor );
 
 	return color; 
 }
@@ -82,11 +97,15 @@ void main()
 	// from start to end point in volume using step size for ray sampling
 	Sample maxSample = mip( uvwStart, uvwEnd, uStepSize );
 
-	// TODO
-	float distanceToCamera = 0.0f;
+	// distance color effect: decreasing contrast 
+	float distanceToCamera = min(1.0, length(maxSample.uvw - uvwStart)); // placeholder
+	float relativeIntensity = ( float( maxSample.value ) - uMinVal ) / uRange;
+	relativeIntensity = contrastFalloffQuadratic(relativeIntensity, distanceToCamera);
+
+	int value = int( uMinVal + relativeIntensity * uRange );
 
 	// compute fragment color
-	vec4 color = transferFunction( maxSample.value, distanceToCamera);
+	vec4 color = transferFunction( value, distanceToCamera);
 
 	fragColor = vec4(color.rgb, 1.0);
 

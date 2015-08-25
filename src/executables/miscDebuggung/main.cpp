@@ -9,7 +9,15 @@
 #include <UI/Turntable.h>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
+////////////////////////////////////////////////////////////////
+static float s_minValue = -FLT_MAX; // minimal value in data set; to be overwitten after import
+static bool s_isRotating = false; 	// initial state for rotating animation
+
+static glm::vec4 s_maxDistColor = glm::vec4(0.41, 0.41f, 0.50f, 1.0f);// far : blueish
+static glm::vec4 s_minDistColor = glm::vec4(1.0f, 0.75f, 0.75f, 1.0f); // near: reddish
+////////////////////////////////////////////////////////////////
 int main()
 {
 	DEBUGLOG->setAutoPrint(true);
@@ -22,8 +30,8 @@ int main()
 	file += std::string( "/CTHead/CThead");
 
 	// load data
-//	VolumeData<short> volumeData = Importer::load3DData<short>(file, 256, 256, 113, 2);
-	VolumeData<short> volumeData = Importer::loadBruder();
+	VolumeData<short> volumeData = Importer::load3DData<short>(file, 256, 256, 113, 2);
+	// VolumeData<short> volumeData = Importer::loadBruder();
 
 	DEBUGLOG->log("File Info:");
 	DEBUGLOG->indent();
@@ -33,6 +41,8 @@ int main()
 		DEBUGLOG->log("res. y   : ", volumeData.size_y);
 		DEBUGLOG->log("res. z   : ", volumeData.size_z);
 	DEBUGLOG->outdent();
+
+	s_minValue = (float) volumeData.min;
 
 	// create window and opengl context
 	auto window = generateWindow(800,800);
@@ -51,7 +61,7 @@ int main()
 	
 	// scene/view settings
 	glm::mat4 model = glm::mat4(1.0f);
-//	model[1] = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f); // flip y
+	// model[1] = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f); // flip y
 	glm::vec4 eye(2.5f, 0.5f, 2.5f, 1.0f);
 	glm::vec4 center(0.0f,0.0f,0.0f,1.0f);
 	glm::mat4 view = glm::lookAt(glm::vec3(eye), glm::vec3(center), glm::vec3(0,1,0));
@@ -198,30 +208,38 @@ int main()
 		glfwSetWindowTitle(window, window_header.c_str() );
 
 		////////////////////////////////     GUI      ////////////////////////////////
-		static float minValue = volumeData.min;
-		static bool isRotating = true;
         ImGuiIO& io = ImGui::GetIO();
 		ImGui_ImplGlfwGL3_NewFrame(); // tell ImGui a new frame is being rendered
+
 		// debug interface
-		ImGui::SliderFloat("min. value", &minValue, volumeData.min, volumeData.max);
-		ImGui::Checkbox("auto-rotate", &isRotating);
+		ImGui::SliderFloat("min. value", &s_minValue, volumeData.min, volumeData.max); // lower grayscale ramp boundary
+		ImGui::Checkbox("auto-rotate", &s_isRotating); // rotating volume
+
+		ImGui::ColorEdit4("max color", glm::value_ptr(s_maxDistColor)); // color mixed into color at max distance
+		ImGui::ColorEdit4("min color", glm::value_ptr(s_minDistColor)); // color mixed into color at max distance
         //////////////////////////////////////////////////////////////////////////////
-		
-		///////////////////////////  SHADER UPDATING /////////////////////////////////
-		if (isRotating)
+
+		///////////////////////////// DYNAMIC UPDATING ///////////////////////////////
+		if (s_isRotating) // update view matrix
 		{
 			eye = glm::rotate(glm::mat4(1.0f), (float) dt, glm::vec3(0.0f, 1.0f, 0.0f) ) * eye;
 		}
 		view = glm::lookAt(glm::vec3(eye), glm::vec3(center), glm::vec3(0.0f, 1.0f, 0.0f));
-
+		//////////////////////////////////////////////////////////////////////////////
+				
+		///////////////////////////  SHADER UPDATING /////////////////////////////////
 		// update uniforms
 		shaderProgram.update(   "view", view);
 		uvwShaderProgram.update("view", view);
 		shaderProgram.update(   "model", turntable.getRotationMatrix() * model);
 		uvwShaderProgram.update("model", turntable.getRotationMatrix() * model);
 
-		shaderProgram.update("uMinVal", minValue);
-		shaderProgram.update("uRange", volumeData.max - minValue);
+		// update color mapping parameters
+		shaderProgram.update("uMinVal", s_minValue); 			// lower grayscale ramp boundary
+		shaderProgram.update("uRange", volumeData.max - s_minValue);  // full range of data values
+		shaderProgram.update("uMaxDistColor", s_maxDistColor);  // color at full distance
+		shaderProgram.update("uMinDistColor", s_minDistColor);  // color at min depth
+
 		//////////////////////////////////////////////////////////////////////////////
 		
 		////////////////////////////////  RENDERING //// /////////////////////////////
