@@ -46,8 +46,6 @@ GLuint FrameBufferObject::createFramebufferTexture()
 	{
 		// for testing purposes
 		glTexStorage2D(GL_TEXTURE_2D, 1, s_internalFormat, m_width, m_height);	
-
-		//TODO what else must be used to ensure same behaviour as TexImage2D ?
 	}
 	else
 	{

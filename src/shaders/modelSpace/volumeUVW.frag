@@ -14,12 +14,12 @@ void main()
 //	if(passNormal.z >= 0.0) // front face
 	if(gl_FrontFacing) // front face
 	{
-		fragUVRCoordFront = vec4(passUVWCoord, 1.0);
+		fragUVRCoordFront = vec4(passUVWCoord, gl_FragCoord.z); // alpha contains fragment depth
 		fragUVRCoordBack  = vec4(0.0);
 	}
 	else // back face
 	{
-		fragUVRCoordBack = vec4(passUVWCoord, 1.0);
+		fragUVRCoordBack = vec4(passUVWCoord, gl_FragCoord.z); // alpha contains fragment depth
 		fragUVRCoordFront  = vec4(0.0);
 	}
 }

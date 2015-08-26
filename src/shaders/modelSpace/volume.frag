@@ -7,14 +7,16 @@ in vec3 passNormal;
 in vec2 passImageCoord;
 
 // textures
-uniform sampler2D front_uvw_map;
 uniform sampler2D back_uvw_map;
+uniform sampler2D front_uvw_map;
 
 // uniforms
 uniform isampler3D volume_texture;
 uniform float uRange;
 uniform float uMinVal;
 uniform float uStepSize;
+uniform float uColorEffectInfl;
+uniform float uContrastEffectInfl;
 uniform vec4 uMaxDistColor;
 uniform vec4 uMinDistColor;
 
@@ -67,13 +69,13 @@ Sample mip(vec3 startUVW, vec3 endUVW, float stepSize)
 	return result;
 }
 
-float contrastFalloffQuadratic(float relVal, float dist)
+float contrastAttenuationQuadratic(float relVal, float dist)
 {	
 	float quadrDist = dist*dist;
 	return  0.5 * quadrDist + relVal * (1.0 - quadrDist);
 }
 
-float contrastFalloffLinear(float relVal, float dist)
+float contrastAttenuationLinear(float relVal, float dist)
 {	
 	return  0.5 * dist + relVal * (1.0 - dist);
 }
@@ -81,8 +83,7 @@ float contrastFalloffLinear(float relVal, float dist)
 vec4 transferFunction( int value, float distanceToCamera )
 {
 	vec4 color = vec4( (float( value ) - uMinVal) / uRange );
-
-	color = color * ( (1.0 - distanceToCamera) * uMinDistColor + (distanceToCamera) * uMaxDistColor );
+	color = color * ( mix( uMinDistColor, uMaxDistColor, distanceToCamera ) );
 
 	return color; 
 }
@@ -90,24 +91,35 @@ vec4 transferFunction( int value, float distanceToCamera )
 void main()
 {
 	// define ray boundaries
-	vec3 uvwStart = texture( front_uvw_map, passImageCoord ).xyz;
-	vec3 uvwEnd = texture( back_uvw_map, passImageCoord ).xyz;
+	vec4 uvwStart = texture( front_uvw_map, passImageCoord );
+	vec4 uvwEnd = texture( back_uvw_map, passImageCoord );
 
 	// value received for a maximum intensity projection 
 	// from start to end point in volume using step size for ray sampling
-	Sample maxSample = mip( uvwStart, uvwEnd, uStepSize );
+	Sample maxSample = mip( uvwStart.rgb, uvwEnd.rgb, uStepSize );
+
+//	float distanceToCamera = min(1.0, length(maxSample.uvw - uvwStart.rgb)); // placeholder
+	float distanceToCamera = mix(
+		uvwStart.a, // depth buffer 
+		uvwEnd.a,   // depth buffer
+		min(1.0, length(maxSample.uvw - uvwStart.rgb)));
 
 	// distance color effect: decreasing contrast 
-	float distanceToCamera = min(1.0, length(maxSample.uvw - uvwStart)); // placeholder
 	float relativeIntensity = ( float( maxSample.value ) - uMinVal ) / uRange;
-	relativeIntensity = contrastFalloffQuadratic(relativeIntensity, distanceToCamera);
+	float mappedIntensity = mix( 
+		relativeIntensity,
+		contrastAttenuationQuadratic(relativeIntensity, distanceToCamera),
+		uContrastEffectInfl);
 
-	int value = int( uMinVal + relativeIntensity * uRange );
+	int value = int( uMinVal + mappedIntensity * uRange );
 
-	// compute fragment color
-	vec4 color = transferFunction( value, distanceToCamera);
+	// color 
+	vec4 mappedColor = mix( 
+		vec4(mappedIntensity),
+		transferFunction(value, distanceToCamera),
+		uColorEffectInfl);
 
-	fragColor = vec4(color.rgb, 1.0);
+	fragColor = mappedColor;
 
     fragPosition = vec4(passPosition,1);
     fragUVCoord = vec4(passUVWCoord.xy,0,0);

@@ -11,11 +11,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-////////////////////////////////////////////////////////////////
+////////////////////// PARAMETERS /////////////////////////////
 static float s_minValue = -FLT_MAX; // minimal value in data set; to be overwitten after import
 static bool s_isRotating = false; 	// initial state for rotating animation
+static float s_rayStepSize = 0.1f;  // ray sampling step size; to be overwritten after volume data import
 
-static glm::vec4 s_maxDistColor = glm::vec4(0.41, 0.41f, 0.50f, 1.0f);// far : blueish
+static float 	 s_colorEffectInfluence = 1.0f;
+static float 	 s_contrastEffectInfluence = 1.0f;
+static glm::vec4 s_maxDistColor = glm::vec4(0.75, 0.74f, 0.82f, 1.0f);// far : blueish
 static glm::vec4 s_minDistColor = glm::vec4(1.0f, 0.75f, 0.75f, 1.0f); // near: reddish
 ////////////////////////////////////////////////////////////////
 int main()
@@ -42,7 +45,9 @@ int main()
 		DEBUGLOG->log("res. z   : ", volumeData.size_z);
 	DEBUGLOG->outdent();
 
+	// set volume specific parameters
 	s_minValue = (float) volumeData.min;
+	s_rayStepSize = 1.0f / (2.0f * volumeData.size_x); // this seems a reasonable size
 
 	// create window and opengl context
 	auto window = generateWindow(800,800);
@@ -59,7 +64,7 @@ int main()
 	/////////////////////////////// RENDERING  ///////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////
 	
-	// scene/view settings
+	/////////////////////     Scene / View Settings     //////////////////////////
 	glm::mat4 model = glm::mat4(1.0f);
 	// model[1] = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f); // flip y
 	glm::vec4 eye(2.5f, 0.5f, 2.5f, 1.0f);
@@ -67,12 +72,12 @@ int main()
 	glm::mat4 view = glm::lookAt(glm::vec3(eye), glm::vec3(center), glm::vec3(0,1,0));
 
 	// glm::mat4 perspective = glm::perspective(45.f, getRatio(window), 0.1f, 100.f);
-	glm::mat4 perspective = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, -1.0f, 10.0f);
+	glm::mat4 perspective = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, -1.0f, 6.0f);
 
 	// create Volume
 	Volume volume(1.0f, 1.0f, 1.26315f);
 
-	// create renderpass for UV maps
+	///////////////////////     UVW Map Renderpass     ///////////////////////////
 	DEBUGLOG->log("Shader Compilation: volume uvw coords"); DEBUGLOG->indent();
 	ShaderProgram uvwShaderProgram("/modelSpace/volumeMVP.vert", "/modelSpace/volumeUVW.frag"); DEBUGLOG->outdent();
 	uvwShaderProgram.update("model", model);
@@ -83,14 +88,14 @@ int main()
 	FrameBufferObject uvwFBO(getResolution(window).x, getResolution(window).y);
 	uvwFBO.addColorAttachments(2); DEBUGLOG->outdent(); // front UVRs and back UVRs
 	
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	RenderPass uvwRenderPass(&uvwShaderProgram, &uvwFBO);
-	uvwRenderPass.addClearBit(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	uvwRenderPass.addDisable(GL_DEPTH_TEST);
-	uvwRenderPass.addEnable(GL_BLEND);
+	uvwRenderPass.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	uvwRenderPass.addDisable(GL_DEPTH_TEST); // to prevent back fragments from being discarded
+	uvwRenderPass.addEnable(GL_BLEND); // to prevent vec4(0.0) outputs from overwriting previous results
 	uvwRenderPass.addRenderable(&volume);
 
-	// create ray casting shader and render pass
+	
+	///////////////////////   Ray-Casting Renderpass    //////////////////////////
 	DEBUGLOG->log("Shader Compilation: ray casting shader"); DEBUGLOG->indent();
 	ShaderProgram shaderProgram("/modelSpace/volumeMVP.vert", "/modelSpace/volume.frag"); DEBUGLOG->outdent();
 	shaderProgram.update("model", model);
@@ -100,7 +105,7 @@ int main()
 	shaderProgram.update("uMinVal", (float) volumeData.min);
 	shaderProgram.update("uRange", (float) volumeData.max - (float) volumeData.min);
 
-	shaderProgram.update("uStepSize", 1.0f / (2.0f * volumeData.size_x));
+	shaderProgram.update("uStepSize", s_rayStepSize);
 		
 	// bind volume texture, front uvws, back uvw textures
 	glActiveTexture(GL_TEXTURE0);
@@ -119,6 +124,8 @@ int main()
 	RenderPass renderPass(&shaderProgram);
 	renderPass.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	renderPass.addRenderable(&volume);
+	renderPass.addEnable(GL_DEPTH_TEST);
+	renderPass.addDisable(GL_BLEND);
 
 	//////////////////////////////////////////////////////////////////////////////
 	///////////////////////    GUI / USER INPUT   ////////////////////////////////
@@ -215,8 +222,10 @@ int main()
 		ImGui::SliderFloat("min. value", &s_minValue, volumeData.min, volumeData.max); // lower grayscale ramp boundary
 		ImGui::Checkbox("auto-rotate", &s_isRotating); // rotating volume
 
-		ImGui::ColorEdit4("max color", glm::value_ptr(s_maxDistColor)); // color mixed into color at max distance
-		ImGui::ColorEdit4("min color", glm::value_ptr(s_minDistColor)); // color mixed into color at max distance
+		ImGui::ColorEdit4("max color", glm::value_ptr(s_maxDistColor)); // color mixed at max distance
+		ImGui::ColorEdit4("min color", glm::value_ptr(s_minDistColor)); // color mixed at min distance
+        ImGui::SliderFloat("color effect influence", &s_colorEffectInfluence, 0.0f, 1.0f); 		 // influence of color shift
+        ImGui::SliderFloat("contrast effect influence", &s_contrastEffectInfluence, 0.0f, 1.0f); // influence of contrast attenuation
         //////////////////////////////////////////////////////////////////////////////
 
 		///////////////////////////// DYNAMIC UPDATING ///////////////////////////////
@@ -239,15 +248,17 @@ int main()
 		shaderProgram.update("uRange", volumeData.max - s_minValue);  // full range of data values
 		shaderProgram.update("uMaxDistColor", s_maxDistColor);  // color at full distance
 		shaderProgram.update("uMinDistColor", s_minDistColor);  // color at min depth
+		shaderProgram.update("uColorEffectInfl", s_colorEffectInfluence);  // color shift effect influence
+		shaderProgram.update("uContrastEffectInfl", s_contrastEffectInfluence);  // contrast attenuation effect influence
 
 		//////////////////////////////////////////////////////////////////////////////
 		
 		////////////////////////////////  RENDERING //// /////////////////////////////
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // this is altered by ImGui::Render(), so set it every frame
 		uvwRenderPass.render();
 		renderPass.render();
 		ImGui::Render();
 		//////////////////////////////////////////////////////////////////////////////
-
 	});
 
 	destroyWindow(window);
