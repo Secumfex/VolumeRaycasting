@@ -16,6 +16,9 @@ static float s_minValue = -FLT_MAX; // minimal value in data set; to be overwitt
 static bool s_isRotating = false; 	// initial state for rotating animation
 static float s_rayStepSize = 0.1f;  // ray sampling step size; to be overwritten after volume data import
 
+static float s_rayOffsetBack = 1.0f; // offset from uvw ray start in volume
+static float s_rayOffsetFront= 0.0f;// offset from uvw ray end in volume
+
 static float 	 s_colorEffectInfluence = 1.0f;
 static float 	 s_contrastEffectInfluence = 1.0f;
 static glm::vec4 s_maxDistColor = glm::vec4(0.75, 0.74f, 0.82f, 1.0f);// far : blueish
@@ -240,7 +243,7 @@ int main()
 		ImGui::DragInt("LMIP min steps", &s_LMIP_minStepsToLocalMaximum, 1.0f, 0, 100);
 		shaderProgram.update("uMinStepsLMIP", s_LMIP_minStepsToLocalMaximum);
 
-        // ImGui::DragFloatRange2("range", &begin, &end, 0.25f, 0.0f, 100.0f, "Min: %.1f %%", "Max: %.1f %%");
+        ImGui::DragFloatRange2("ray range", &s_rayOffsetFront, &s_rayOffsetBack, 0.01f, 0.0f, 1.0f);
         //////////////////////////////////////////////////////////////////////////////
 
 		///////////////////////////// DYNAMIC UPDATING ///////////////////////////////
@@ -261,6 +264,8 @@ int main()
 		// update color mapping parameters
 		shaderProgram.update("uMinVal", s_minValue); 			// lower grayscale ramp boundary
 		shaderProgram.update("uRange", volumeData.max - s_minValue);  // full range of data values
+		shaderProgram.update("uRayOffsetFront", s_rayOffsetFront); // offset of ray start parameter to front of volume
+		shaderProgram.update("uRayOffsetBack", s_rayOffsetBack);  // offset of ray end parameter to back of volume
 		shaderProgram.update("uMaxDistColor", s_maxDistColor);  // color at full distance
 		shaderProgram.update("uMinDistColor", s_minDistColor);  // color at min depth
 		shaderProgram.update("uColorEffectInfl", s_colorEffectInfluence);  // color shift effect influence

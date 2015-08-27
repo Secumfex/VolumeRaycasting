@@ -14,6 +14,8 @@ uniform sampler2D front_uvw_map;
 uniform isampler3D volume_texture;
 uniform float uRange;
 uniform float uMinVal;
+uniform float uRayOffsetFront;
+uniform float uRayOffsetBack;
 uniform float uStepSize;
 uniform float uThresholdLMIP;
 uniform float uColorEffectInfl;
@@ -44,6 +46,14 @@ Sample mip(vec3 startUVW, vec3 endUVW, float stepSize, float thresholdLMIP, int 
 	// length of ray in volume from start to end
 	vec3 direction = endUVW - startUVW;
 	float rayLength = length(direction);
+
+	// apply offsets to front and back
+	startUVW = startUVW + uRayOffsetFront * direction;
+	endUVW = endUVW - (1.0 - uRayOffsetBack) * direction;
+	
+	// update Direction and rayLength
+	direction = endUVW - startUVW;
+	rayLength = length(direction);
 
 	// necessary steps to get from start to end
 	int steps = max( int( rayLength / stepSize), 1);
