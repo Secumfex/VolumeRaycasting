@@ -20,7 +20,7 @@ uniform float uColorEffectInfl;
 uniform float uContrastEffectInfl;
 uniform vec4 uMaxDistColor;
 uniform vec4 uMinDistColor;
-uniform int  uMinStepsLMIP; 
+uniform int  uMinStepsLMIP; // experimental parameter
 
 // out-variables
 layout(location = 0) out vec4 fragColor;
@@ -72,7 +72,7 @@ Sample mip(vec3 startUVW, vec3 endUVW, float stepSize, float thresholdLMIP, int 
 			if ( maxVal > thresholdLMIP ) // LMIP is satisfied
 			{
 				stepsSinceLM++;
-				if (stepsSinceLM > minStepsLMIP)
+				if (stepsSinceLM > minStepsLMIP) // experimental: minimal offset to local maximum with no new maximum
 				{
 					break; // maxVal is a local maximum AND greater than LMIP threshold
 				}
