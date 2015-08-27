@@ -15,10 +15,12 @@ uniform isampler3D volume_texture;
 uniform float uRange;
 uniform float uMinVal;
 uniform float uStepSize;
+uniform float uThresholdLMIP;
 uniform float uColorEffectInfl;
 uniform float uContrastEffectInfl;
 uniform vec4 uMaxDistColor;
 uniform vec4 uMinDistColor;
+uniform int  uMinStepsLMIP; 
 
 // out-variables
 layout(location = 0) out vec4 fragColor;
@@ -37,7 +39,7 @@ vec3 samplePos(vec3 start, vec3 direction, float t)
 	return (start + t * direction);
 }
 
-Sample mip(vec3 startUVW, vec3 endUVW, float stepSize)
+Sample mip(vec3 startUVW, vec3 endUVW, float stepSize, float thresholdLMIP, int minStepsLMIP)
 {
 	// length of ray in volume from start to end
 	vec3 direction = endUVW - startUVW;
@@ -49,16 +51,32 @@ Sample mip(vec3 startUVW, vec3 endUVW, float stepSize)
 	int maxVal = -4000;
 	vec3 maxUVW = startUVW;
 
+	// count steps since local maximum
+	int stepsSinceLM = 0; 
+
 	// cast ray and perform mip
 	for (int i = 0; i < steps; i++)
 	{
 		vec3 curUVW = samplePos(startUVW, direction, float(i) * stepSize);
 		int  curVal = texture(volume_texture, curUVW).r;
 
-		if ( curVal > maxVal)
+		if ( curVal > maxVal) // approaching local maximum
 		{
 			maxVal = curVal;
 			maxUVW = curUVW;
+
+			stepsSinceLM = 0;
+		}
+		else // leaving local maximum
+		{
+			if ( maxVal > thresholdLMIP ) // LMIP is satisfied
+			{
+				stepsSinceLM++;
+				if (stepsSinceLM > minStepsLMIP)
+				{
+					break; // maxVal is a local maximum AND greater than LMIP threshold
+				}
+			}
 		}		
 	}
 
@@ -82,7 +100,10 @@ float contrastAttenuationLinear(float relVal, float dist)
 
 vec4 transferFunction( int value, float distanceToCamera )
 {
+	// linear mapping to [0,1]
 	vec4 color = vec4( (float( value ) - uMinVal) / uRange );
+
+	// linear mapping to [uMinDistColor, uMaxDistColor] (rgb colors)
 	color = color * ( mix( uMinDistColor, uMaxDistColor, distanceToCamera ) );
 
 	return color; 
@@ -96,9 +117,11 @@ void main()
 
 	// value received for a maximum intensity projection 
 	// from start to end point in volume using step size for ray sampling
-	Sample maxSample = mip( uvwStart.rgb, uvwEnd.rgb, uStepSize );
+	// threshold for LMIP to break traversal
+	// steps since last local maximum before LMIP accepts it as such
+	Sample maxSample = mip( uvwStart.rgb, uvwEnd.rgb, uStepSize, uThresholdLMIP, uMinStepsLMIP );
 
-//	float distanceToCamera = min(1.0, length(maxSample.uvw - uvwStart.rgb)); // placeholder
+	// approximate distance to camera (linear interpolation)
 	float distanceToCamera = mix(
 		uvwStart.a, // depth buffer 
 		uvwEnd.a,   // depth buffer
@@ -113,7 +136,7 @@ void main()
 
 	int value = int( uMinVal + mappedIntensity * uRange );
 
-	// color 
+	// distance color effect: red/blue color mapping
 	vec4 mappedColor = mix( 
 		vec4(mappedIntensity),
 		transferFunction(value, distanceToCamera),

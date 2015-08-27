@@ -20,7 +20,15 @@ static float 	 s_colorEffectInfluence = 1.0f;
 static float 	 s_contrastEffectInfluence = 1.0f;
 static glm::vec4 s_maxDistColor = glm::vec4(0.75, 0.74f, 0.82f, 1.0f);// far : blueish
 static glm::vec4 s_minDistColor = glm::vec4(1.0f, 0.75f, 0.75f, 1.0f); // near: reddish
-////////////////////////////////////////////////////////////////
+
+static float s_LMIP_threshold = FLT_MAX; // LMIP threshold 
+static bool  s_LMIP_isEnabled = false;
+static int s_LMIP_minStepsToLocalMaximum = 3; // steps before Local Maximum is accepted
+
+//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// MAIN ///////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
 int main()
 {
 	DEBUGLOG->setAutoPrint(true);
@@ -48,6 +56,7 @@ int main()
 	// set volume specific parameters
 	s_minValue = (float) volumeData.min;
 	s_rayStepSize = 1.0f / (2.0f * volumeData.size_x); // this seems a reasonable size
+	s_LMIP_threshold = (float) volumeData.max;
 
 	// create window and opengl context
 	auto window = generateWindow(800,800);
@@ -107,13 +116,13 @@ int main()
 
 	shaderProgram.update("uStepSize", s_rayStepSize);
 		
-	// bind volume texture, front uvws, back uvw textures
+	// bind volume texture, back uvw textures, front uvws
 	glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, volumeTexture);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, uvwFBO.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+	glBindTexture(GL_TEXTURE_2D, uvwFBO.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0)); //back uvw buffer
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, uvwFBO.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
+	glBindTexture(GL_TEXTURE_2D, uvwFBO.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1)); //front uvw buffer
 	glActiveTexture(GL_TEXTURE0);
 	
 	shaderProgram.update("volume_texture", 0); // volume texture
@@ -178,16 +187,16 @@ int main()
 		switch (k)
 		{
 			case GLFW_KEY_W:
-				eye += glm::inverse(view)    * glm::vec4(0.0f,0.0f,0.1f,0.0f);
-				center += glm::inverse(view) * glm::vec4(0.0f,0.0f,0.1f,0.0f);
+				eye += glm::inverse(view)    * glm::vec4(0.0f,0.0f,-0.1f,0.0f);
+				center += glm::inverse(view) * glm::vec4(0.0f,0.0f,-0.1f,0.0f);
 				break;
 			case GLFW_KEY_A:
 				eye += glm::inverse(view)	 * glm::vec4(-0.1f,0.0f,0.0f,0.0f);
 				center += glm::inverse(view) * glm::vec4(-0.1f,0.0f,0.0f,0.0f);
 				break;
 			case GLFW_KEY_S:
-				eye += glm::inverse(view)    * glm::vec4(0.0f,0.0f,-0.1f,0.0f);
-				center += glm::inverse(view) * glm::vec4(0.0f,0.0f,-0.1f,0.0f);
+				eye += glm::inverse(view)    * glm::vec4(0.0f,0.0f,0.1f,0.0f);
+				center += glm::inverse(view) * glm::vec4(0.0f,0.0f,0.1f,0.0f);
 				break;
 			case GLFW_KEY_D:
 				eye += glm::inverse(view)    * glm::vec4(0.1f,0.0f,0.0f,0.0f);
@@ -220,12 +229,18 @@ int main()
 
 		// debug interface
 		ImGui::SliderFloat("min. value", &s_minValue, volumeData.min, volumeData.max); // lower grayscale ramp boundary
-		ImGui::Checkbox("auto-rotate", &s_isRotating); // rotating volume
+		ImGui::Checkbox("auto-rotate", &s_isRotating); // enable/disable rotating volume
 
 		ImGui::ColorEdit4("max color", glm::value_ptr(s_maxDistColor)); // color mixed at max distance
 		ImGui::ColorEdit4("min color", glm::value_ptr(s_minDistColor)); // color mixed at min distance
         ImGui::SliderFloat("color effect influence", &s_colorEffectInfluence, 0.0f, 1.0f); 		 // influence of color shift
         ImGui::SliderFloat("contrast effect influence", &s_contrastEffectInfluence, 0.0f, 1.0f); // influence of contrast attenuation
+
+		ImGui::SliderFloat("LMIP threshold", &s_LMIP_threshold, volumeData.min, volumeData.max); // LMIP threshold
+		ImGui::DragInt("LMIP min steps", &s_LMIP_minStepsToLocalMaximum, 1.0f, 0, 100);
+		shaderProgram.update("uMinStepsLMIP", s_LMIP_minStepsToLocalMaximum);
+
+        // ImGui::DragFloatRange2("range", &begin, &end, 0.25f, 0.0f, 100.0f, "Min: %.1f %%", "Max: %.1f %%");
         //////////////////////////////////////////////////////////////////////////////
 
 		///////////////////////////// DYNAMIC UPDATING ///////////////////////////////
@@ -250,6 +265,7 @@ int main()
 		shaderProgram.update("uMinDistColor", s_minDistColor);  // color at min depth
 		shaderProgram.update("uColorEffectInfl", s_colorEffectInfluence);  // color shift effect influence
 		shaderProgram.update("uContrastEffectInfl", s_contrastEffectInfluence);  // contrast attenuation effect influence
+		shaderProgram.update("uThresholdLMIP", s_LMIP_threshold);
 
 		//////////////////////////////////////////////////////////////////////////////
 		
