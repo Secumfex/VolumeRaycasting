@@ -1,3 +1,31 @@
+/*******************************************
+ * **** DESCRIPTION ****
+ * This program demonstrates the MIP algorithm in an interactive way.
+ *
+ * It implements screen space volume ray-casting using the OpenGL 4.3 GLSL.
+ * The open-source GUI library ImGui is used to allow for easy and quick interaction.
+ * The MIP is fully parametrized through dynamic shader variables.
+ * 
+ * Additionally, an experimental concept of depth-based color effects is applied
+ * to enhance the visual perception of depth.
+ * It consists of two effects which are applied based on the displayed voxel's 
+ * distance to the camera.
+ * 
+ * 1) The displayed grayscale value range (contrast) decreases with the distance.
+ * 2) The displayed color is shifted towards colors specified for min/max distance.
+ * 
+ * Two data sets are provided: 
+ * 1) the Stanford CTHead Volume Dataset
+ * 2) a private MRT data set of a family member 
+ * 
+ * CODE LINES OF INTEREST 
+ * Line 90 ; change used data set location
+ * Line 92 : switch to MRT data set
+ * Line 133: flip y-axis if data set is upside down
+ * 
+ * Additionally, there are some changes that may be applied to the volume ray-casting fragment shader, located in volume.frag
+ ****************************************/
+
 #include <iostream>
 
 #include <Rendering/GLTools.h>
@@ -58,8 +86,9 @@ int main()
 	std::string file = RESOURCES_PATH;
 	file += std::string( "/CTHead/CThead");
 
-	// load data
+	// load data set: CT of a Head
 	VolumeData<short> volumeData = Importer::load3DData<short>(file, 256, 256, 113, 2);
+	// alternative data set: MRT of a brain; comment this line in and the above out to use 
 	// VolumeData<short> volumeData = Importer::loadBruder();
 
 	DEBUGLOG->log("File Info:");
@@ -295,8 +324,6 @@ int main()
         
 		ImGui::Checkbox("auto-rotate", &s_isRotating); // enable/disable rotating volume
 		ImGui::PopItemWidth();
-
-
         //////////////////////////////////////////////////////////////////////////////
 
 		///////////////////////////// MATRIX UPDATING ///////////////////////////////
