@@ -329,84 +329,84 @@ ShaderProgram* ShaderProgram::update(std::string name, double value)
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::ivec2 vector) 
+ShaderProgram* ShaderProgram::update(std::string name, const glm::ivec2& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform2iv(uniform(name), 1, glm::value_ptr(vector));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::ivec3 vector) 
+ShaderProgram* ShaderProgram::update(std::string name, const glm::ivec3& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform3iv(uniform(name), 1, glm::value_ptr(vector));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::ivec4 vector) 
+ShaderProgram* ShaderProgram::update(std::string name,const glm::ivec4& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform4iv(uniform(name), 1, glm::value_ptr(vector));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::vec2 vector) 
+ShaderProgram* ShaderProgram::update(std::string name, const glm::vec2& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform2fv(uniform(name), 1, glm::value_ptr(vector));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::vec3 vector) 
+ShaderProgram* ShaderProgram::update(std::string name, const glm::vec3& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform3fv(uniform(name), 1, glm::value_ptr(vector));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::vec4 vector) 
+ShaderProgram* ShaderProgram::update(std::string name, const glm::vec4& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform4fv(uniform(name), 1, glm::value_ptr(vector));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::mat2 matrix) 
+ShaderProgram* ShaderProgram::update(std::string name, const glm::mat2& matrix) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniformMatrix2fv(uniform(name), 1, GL_FALSE, glm::value_ptr(matrix));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::mat3 matrix) 
+ShaderProgram* ShaderProgram::update(std::string name, const glm::mat3& matrix) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniformMatrix3fv(uniform(name), 1, GL_FALSE, glm::value_ptr(matrix));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, glm::mat4 matrix) 
+ShaderProgram* ShaderProgram::update(std::string name, const glm::mat4& matrix) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniformMatrix4fv(uniform(name), 1, GL_FALSE, glm::value_ptr(matrix));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, std::vector<glm::vec2> vector) 
+ShaderProgram* ShaderProgram::update(std::string name, const std::vector<glm::vec2>& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform2fv(uniform(name), sizeof(vector), glm::value_ptr((&vector[0])[0]));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, std::vector<glm::vec3> vector) 
+ShaderProgram* ShaderProgram::update(std::string name, const std::vector<glm::vec3>& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform3fv(uniform(name), sizeof(vector), glm::value_ptr((&vector[0])[0]));
 	return this;
 }
 
-ShaderProgram* ShaderProgram::update(std::string name, std::vector<glm::vec4> vector) 
+ShaderProgram* ShaderProgram::update(std::string name, const std::vector<glm::vec4>& vector) 
 {
 	glUseProgram(m_shaderProgramHandle);
 	glUniform4fv(uniform(name), sizeof(vector), glm::value_ptr((&vector[0])[0]));

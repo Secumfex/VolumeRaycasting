@@ -10,7 +10,9 @@
 
 #include <Core/DebugLog.h>
 
-template<typename T>
+#include <algorithm>
+
+template<class T>
 struct VolumeData
 {
 	unsigned int size_x; //!< x: left
@@ -37,7 +39,7 @@ namespace Importer {
 	 * @param num_files of slice files. will be loaded in ascending order
 	 * @return data from files
 	 */
-	template<typename T>
+	template<class T>
 	VolumeData<T> load3DData(std::string path, unsigned size_x, unsigned size_y, unsigned int num_files, unsigned int num_bytes_per_entry = 1)
 	{
 		DEBUGLOG->log("Loading files with prefix :" + path);

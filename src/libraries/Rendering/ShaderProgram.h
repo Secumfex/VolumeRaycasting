@@ -86,7 +86,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::ivec2 vector);
+	ShaderProgram* update(std::string name, const glm::ivec2& vector);
 	/**
 	 * @brief Updates a 3D integer vector uniform variable
 	 * 
@@ -95,7 +95,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::ivec3 vector);
+	ShaderProgram* update(std::string name, const glm::ivec3& vector);
 	/**
 	 * @brief Updates a 4D integer vector uniform variable
 	 * 
@@ -104,7 +104,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::ivec4 vector);
+	ShaderProgram* update(std::string name, const glm::ivec4& vector);
 	/**
 	 * @brief Updates a 2D float vector uniform variable
 	 * 
@@ -113,7 +113,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::vec2 vector);
+	ShaderProgram* update(std::string name, const glm::vec2& vector);
 	/**
 	 * @brief Updates a 3D float vector uniform variable
 	 * 
@@ -122,7 +122,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::vec3 vector);
+	ShaderProgram* update(std::string name, const glm::vec3& vector);
 	/**
 	 * @brief Updates a 4D float vector uniform variable
 	 * 
@@ -131,7 +131,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::vec4 vector);
+	ShaderProgram* update(std::string name, const glm::vec4& vector);
 	/**
 	 * @brief Updates a 2x2 matrix uniform variable
 	 * 
@@ -140,7 +140,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::mat2 matrix);
+	ShaderProgram* update(std::string name, const glm::mat2& matrix);
 	/**
 	 * @brief Updates a 3x3 matrix uniform variable
 	 * 
@@ -149,7 +149,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::mat3 matrix);
+	ShaderProgram* update(std::string name, const glm::mat3& matrix);
 	/**
 	 * @brief Updates a 4x4 matrix uniform variable
 	 * 
@@ -158,7 +158,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, glm::mat4 matrix);
+	ShaderProgram* update(std::string name, const glm::mat4& matrix);
 	/**
 	 * @brief Updates a list of 2D vector uniform variables
 	 * 
@@ -167,7 +167,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, std::vector<glm::vec2> vector);
+	ShaderProgram* update(std::string name, const std::vector<glm::vec2>& vector);
 	/**
 	 * @brief Updates a list of 3D vector uniform variables
 	 * 
@@ -176,7 +176,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, std::vector<glm::vec3> vector);
+	ShaderProgram* update(std::string name, const std::vector<glm::vec3>& vector);
 	/**
 	 * @brief Updates a list of 4D vector uniform variables
 	 * 
@@ -185,7 +185,7 @@ public:
 	 * 
 	 * @return The shader program
 	 */
-	ShaderProgram* update(std::string name, std::vector<glm::vec4> vector);
+	ShaderProgram* update(std::string name, const std::vector<glm::vec4>& vector);
 
 	/**
 	 * @brief Method to add a buffer to the shader and return the bound location
