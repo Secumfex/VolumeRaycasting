@@ -27,6 +27,7 @@ uniform float uColorEffectInfl;    // color    effect: influence parameter [0,1]
 uniform float uContrastEffectInfl; // contrast effect: influence parameter [0,1]
 uniform vec4  uMaxDistColor; // color effect: color at max distance
 uniform vec4  uMinDistColor; // color effect: color at min distance
+uniform int   uMixMode; 	 // color effect: color mixing mode (0 multiply, 1 add, 2 subtract [experimental]) 
 
 /********************    EXPERIMENTAL PARAMETERS      ***********************/ 
 uniform int  uMinStepsLMIP;    // parameter for LMIP 'smoothing'
@@ -141,14 +142,33 @@ float contrastAttenuationSquared(float relVal, float dist)
 	return  mix(relVal, 0.5, squaredDist);
 }
 
-vec4 transferFunction( int value, float distanceToCamera )
+/**
+ * @brief 'transfer-function' applied to value at a given distance to Camera. 
+ * shifts towards one color or the other
+ * @param value to be mapped to a color
+ * @param depth parameter to shift towards front or back color
+ * 
+ * @return mapped color corresponding to value at provided depth
+ */
+vec4 transferFunction( int value, float depth)
 {
 	// linear mapping to grayscale color [0,1]
 	vec4 color = vec4( (float( value ) - uWindowingMinVal) / uWindowingRange );
 
 	// linear mapping to [uMinDistColor, uMaxDistColor] (rgb colors)
-	color = color * ( mix( uMinDistColor, uMaxDistColor, distanceToCamera ) );
-
+	switch (uMixMode)
+	{
+	case 0: // multiply 
+		color = color * ( mix( uMinDistColor, uMaxDistColor, depth ) );
+		break;
+	case 1: // add
+		color = color + ( mix( uMinDistColor, uMaxDistColor, depth ) );
+		break;
+	case 2: /// experimental: subtract
+		color = color - ( vec4(1.0) -  mix( uMinDistColor, uMaxDistColor, depth ) );
+		break;
+	}
+	
 	return color; 
 }
 
@@ -162,14 +182,14 @@ void main()
 	uvwStart.rgb = mix (uvwStart.rgb, uvwEnd.rgb, uRayParamStart);
 	uvwEnd.rgb   = mix( uvwStart.rgb, uvwEnd.rgb, uRayParamEnd);
 
-	// find maximum intensity sample
+	// find sampleof maximum intensity
 	VolumeSample maxSample = mip( 
 		uvwStart.rgb, 			// ray start
 		uvwEnd.rgb,   			// ray end
 		uStepSize,    			// sampling step size
 		int(uThresholdLMIP),	// LMIP threshold
 		uMinStepsLMIP,			// LMIP steps
-		uMinValThreshold,	// min value threshold 
+		uMinValThreshold,	 // min value threshold 
 		uMaxValThreshold);   // max value threshold
 
 	// distance to camera 

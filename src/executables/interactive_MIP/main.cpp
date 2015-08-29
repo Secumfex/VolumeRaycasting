@@ -12,8 +12,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 ////////////////////// PARAMETERS /////////////////////////////
-static float s_minValue = -FLT_MAX; // minimal value in data set; to be overwitten after import
-static float s_maxValue = FLT_MAX;  // maximal value in data set; to be overwitten after import
+static float s_minValue = INT_MIN; // minimal value in data set; to be overwitten after import
+static float s_maxValue = INT_MAX;  // maximal value in data set; to be overwitten after import
 
 
 static bool  s_isRotating = false; 	// initial state for rotating animation
@@ -24,8 +24,10 @@ static float s_rayParamStart= 0.0f; // parameter of uvw ray end   in volume
 
 static float 	 s_colorEffectInfluence = 1.0f;
 static float 	 s_contrastEffectInfluence = 1.0f;
-static glm::vec4 s_maxDistColor = glm::vec4(0.75, 0.74f, 0.82f, 1.0f);// far : blueish
+static glm::vec4 s_maxDistColor = glm::vec4(0.75, 0.74f, 0.82f, 1.0f); // far : blueish
 static glm::vec4 s_minDistColor = glm::vec4(1.0f, 0.75f, 0.75f, 1.0f); // near: reddish
+static int 		 s_mixMode = 0;
+static const char* s_mixModeLabels[] = {"Multiply", "Add", "Subtract (experimental)"};
 
 static float s_LMIP_threshold = FLT_MAX; // LMIP threshold 
 static bool  s_LMIP_isEnabled = false;
@@ -70,10 +72,17 @@ int main()
 	DEBUGLOG->outdent();
 
 	// set volume specific parameters
-	s_minValue = (float) volumeData.min;
-	s_maxValue = (float) volumeData.max;
+	s_minValue = volumeData.min;
+	s_maxValue = volumeData.max;
 	s_rayStepSize = 1.0f / (2.0f * volumeData.size_x); // this seems a reasonable size
 	s_LMIP_threshold = (float) volumeData.max;
+	s_windowingMinValue = (float) volumeData.min;
+	s_windowingMaxValue = (float) volumeData.max;
+	s_windowingRange = s_windowingMaxValue - s_windowingMinValue;
+	s_minValThreshold = volumeData.min;
+	s_maxValThreshold = volumeData.max;
+
+	DEBUGLOG->log("Initial ray sampling step size: ", s_rayStepSize);
 
 	// create window and opengl context
 	auto window = generateWindow(800,800);
@@ -129,9 +138,6 @@ int main()
 	shaderProgram.update("view", view);
 	shaderProgram.update("projection", perspective);
 	
-	shaderProgram.update("uMinVal", (float) volumeData.min);
-	shaderProgram.update("uRange", (float) volumeData.max - (float) volumeData.min);
-
 	shaderProgram.update("uStepSize", s_rayStepSize);
 		
 	// bind volume texture, back uvw textures, front uvws
@@ -244,20 +250,53 @@ int main()
 		////////////////////////////////     GUI      ////////////////////////////////
         ImGuiIO& io = ImGui::GetIO();
 		ImGui_ImplGlfwGL3_NewFrame(); // tell ImGui a new frame is being rendered
+		
+		ImGui::PushItemWidth(-100);
+		if (ImGui::CollapsingHeader("Depth Effect Settings"))
+    	{
+			ImGui::ColorEdit4( "max color", glm::value_ptr( s_maxDistColor)); // color mixed at max distance
+			ImGui::ColorEdit4( "min color", glm::value_ptr( s_minDistColor)); // color mixed at min distance
+	        ImGui::SliderFloat("color influence",   &s_colorEffectInfluence, 0.0f, 1.0f); 	// influence of color shift
+	        ImGui::SliderFloat("contrast influence",&s_contrastEffectInfluence, 0.0f, 1.0f); // influence of contrast attenuation
+        	ImGui::ListBox(    "mix mode", &s_mixMode, s_mixModeLabels, IM_ARRAYSIZE(s_mixModeLabels), 3);
+        }
+        if (ImGui::CollapsingHeader("LMIP Settings"))
+    	{
+			ImGui::SliderFloat("LMIP threshold", &s_LMIP_threshold, volumeData.min, volumeData.max); // LMIP threshold
+			if ( ImGui::TreeNode("experimental") )
+			{
+				ImGui::DragInt("LMIP min steps", &s_LMIP_minStepsToLocalMaximum, 1.0f, 0, 100);
+				ImGui::TreePop();
+			}
+		}
+		if (ImGui::CollapsingHeader("Volume Rendering Settings"))
+    	{
+            ImGui::Text("Parameters related to volume rendering");
+            ImGui::DragFloatRange2("windowing range", &s_windowingMinValue, &s_windowingMaxValue, 5.0f, (float) s_minValue, (float) s_maxValue); // grayscale ramp boundaries
+	        ImGui::DragFloatRange2("ray range",   &s_rayParamStart, &s_rayParamEnd,  0.001f, 0.0f, 1.0f);
+        	ImGui::SliderFloat("ray step size",   &s_rayStepSize,  0.0001f, 0.1f, "%.5f", 2.0f);
+        	
+			if ( ImGui::TreeNode("experimental") )
+			{
+            	ImGui::Text("Constrain considered values or reduce effective depth range in frustum");
+            	ImGui::DragIntRange2(  "value range", &s_minValThreshold, &s_maxValThreshold, 5, s_minValue, s_maxValue);
+	    	    ImGui::DragFloatRange2("depth range", &s_minDepthRange, &s_maxDepthRange,0.001f, 0.0f, 1.0f);
+				ImGui::TreePop();
+			}
 
-		// debug interface
-        ImGui::DragFloatRange2("value range", &s_minValue, &s_maxValue, 5.0f, volumeData.min, volumeData.max); // grayscale ramp boundaries
+        }
+		if (ImGui::CollapsingHeader("Experimental Settings"))
+    	{
+            ImGui::Text("Experimental Parameters at a glance");
+	        ImGui::DragInt("LMIP min steps", &s_LMIP_minStepsToLocalMaximum, 1.0f, 0, 100);
+   	    	ImGui::DragIntRange2(  "value range", &s_minValThreshold, &s_maxValThreshold, 5, s_minValue, s_maxValue);
+    	    ImGui::DragFloatRange2("depth range", &s_minDepthRange, &s_maxDepthRange,0.001f, 0.0f, 1.0f);
+		}
+        
 		ImGui::Checkbox("auto-rotate", &s_isRotating); // enable/disable rotating volume
+		ImGui::PopItemWidth();
 
-		ImGui::ColorEdit4( "max color", glm::value_ptr( s_maxDistColor)); // color mixed at max distance
-		ImGui::ColorEdit4( "min color", glm::value_ptr( s_minDistColor)); // color mixed at min distance
-        ImGui::SliderFloat("color effect influence",   &s_colorEffectInfluence, 0.0f, 1.0f); 	// influence of color shift
-        ImGui::SliderFloat("contrast effect influence",&s_contrastEffectInfluence, 0.0f, 1.0f); // influence of contrast attenuation
 
-		ImGui::SliderFloat("LMIP threshold", &s_LMIP_threshold, volumeData.min, volumeData.max); // LMIP threshold
-		ImGui::DragInt(    "LMIP min steps", &s_LMIP_minStepsToLocalMaximum, 1.0f, 0, 100);
-
-        ImGui::DragFloatRange2("ray range", &s_rayParamStart, &s_rayParamEnd, 0.01f, 0.0f, 1.0f);
         //////////////////////////////////////////////////////////////////////////////
 
 		///////////////////////////// MATRIX UPDATING ///////////////////////////////
@@ -280,15 +319,16 @@ int main()
 		// ray start/end parameters
 		shaderProgram.update("uRayParamStart", s_rayParamStart);  // ray start parameter
 		shaderProgram.update("uRayParamEnd",   s_rayParamEnd);    // ray end   parameter
-
+		shaderProgram.update("uStepSize", s_rayStepSize); 	  // ray step size
 		// color mapping parameters
-		shaderProgram.update("uWindowingMinVal", s_minValue); 	  // lower grayscale ramp boundary
-		shaderProgram.update("uWindowingMaxVal", s_maxValue); 	  // upper grayscale ramp boundary
-		shaderProgram.update("uWindowingRange",  s_maxValue - s_minValue); // full range of values in window
+		shaderProgram.update("uWindowingMinVal", s_windowingMinValue); 	  // lower grayscale ramp boundary
+		shaderProgram.update("uWindowingMaxVal", s_windowingMaxValue); 	  // upper grayscale ramp boundary
+		shaderProgram.update("uWindowingRange",  s_windowingMaxValue - s_windowingMinValue); // full range of values in window
 		shaderProgram.update("uMaxDistColor", s_maxDistColor);    // color at full distance
 		shaderProgram.update("uMinDistColor", s_minDistColor);    // color at min depth
-		shaderProgram.update("uColorEffectInfl", s_colorEffectInfluence);  		 // color shift effect influence
-		shaderProgram.update("uContrastEffectInfl", s_contrastEffectInfluence);  // contrast attenuation effect influence
+		shaderProgram.update("uMixMode", 	  s_mixMode);		  // color mixing mode
+		shaderProgram.update("uColorEffectInfl",    s_colorEffectInfluence);  	// color shift effect influence
+		shaderProgram.update("uContrastEffectInfl", s_contrastEffectInfluence); // contrast attenuation effect influence
 
 		// LMIP parameter
 		shaderProgram.update("uThresholdLMIP", 	s_LMIP_threshold);
