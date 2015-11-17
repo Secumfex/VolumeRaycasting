@@ -419,6 +419,8 @@ void ShaderProgram::use()
 
 	// for(auto texture : m_textureMap)
 	// {	
+	// 	std::cout << "name: " << texture.first << ", active texture:" << i << ", uniform: " << uniform(texture.first) << ", handle: " << texture.second << std::endl;
+
 	// 	glUniform1i(uniform(texture.first), i);
 	// 	glActiveTexture(GL_TEXTURE0+i);
 	// 	glBindTexture(GL_TEXTURE_2D,texture.second);

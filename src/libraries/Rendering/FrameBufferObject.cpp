@@ -128,6 +128,7 @@ GLuint FrameBufferObject::getColorAttachmentTextureHandle(GLenum attachment)
 		return m_colorAttachments[attachment];
 	}
 	else{
+		DEBUGLOG->log("ERROR: couldn't find color attachment");
 		return 0;
 	}
 }

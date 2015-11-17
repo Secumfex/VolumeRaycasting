@@ -4,6 +4,7 @@
 #include <vector>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 struct VertexBufferObject
 {
@@ -65,6 +66,41 @@ public:
 	~Quad();
 
 	void draw() override; //!< draws the quad
+};
+
+class Sphere : public Renderable {
+public:
+    /**
+    * @brief default Constructor
+    */
+    Sphere(unsigned int hSlices = 20, unsigned int vSlices = 40, float radius = 1.0f);
+    
+    /**
+    * @brief Deconstructor
+    */
+    ~Sphere();
+
+    void draw() override; //!< draws the sphere
+
+protected:
+    glm::vec3 sampleSurface(float u, float v);
+};
+
+class Grid : public Renderable {
+public:
+    /**
+    * @brief default Constructor
+    */
+    Grid(unsigned int fieldsX = 10, unsigned int fieldsY = 10, float sizeX = 1.0f, float sizeY = 1.0f);
+    
+    /**
+    * @brief Deconstructor
+    */
+    ~Grid();
+
+    void draw() override; //!< draws the sphere
+
+protected:
 };
 
 #endif

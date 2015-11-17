@@ -5,7 +5,9 @@ RenderPass::RenderPass(ShaderProgram* shaderProgram, FrameBufferObject* fbo)
 	m_shaderProgram = shaderProgram;
 	m_fbo = fbo;
 	m_viewport = glm::vec4(-1.0f);
-		
+	
+	p_perRenderableFunction = nullptr;
+
 	m_clearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	if (fbo)
 	{
@@ -96,6 +98,12 @@ void RenderPass::render()
 	for(unsigned int i = 0; i < m_renderables.size(); i++)
 	{
 		uploadUniforms();
+
+		if (p_perRenderableFunction != nullptr)
+		{
+			(*p_perRenderableFunction)(m_renderables[i]);
+		}
+
 		m_renderables[i]->draw();
 	}
 	postRender();

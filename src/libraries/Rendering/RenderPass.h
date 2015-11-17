@@ -7,6 +7,7 @@
 #include "Rendering/Uniform.h"
 
 #include <vector>
+#include <functional>
 
 // template<typename T>
 // struct vecUniform : public std::vector< Uniform<T>* > {};
@@ -30,6 +31,8 @@ protected:
 
 	std::vector< Uploadable* > m_uniforms;
 
+	std::function<void(Renderable* ) >* p_perRenderableFunction;
+
 public:
 	RenderPass(ShaderProgram* shader = 0, FrameBufferObject* fbo = 0);
 	virtual ~RenderPass();
@@ -43,6 +46,8 @@ public:
 	virtual void render();
 	virtual void postRender();
 	virtual void restoreStates();
+
+	inline void setPerRenderableFunction(std::function<void(Renderable*)>* perRenderableFunction){p_perRenderableFunction = perRenderableFunction;}
 
 	void setViewport(int x, int y, int width, int height);
 	void setClearColor(float r, float g, float b, float a = 1.0f);
