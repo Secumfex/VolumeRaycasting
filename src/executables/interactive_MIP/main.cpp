@@ -52,10 +52,13 @@ static float s_rayParamStart= 0.0f; // parameter of uvw ray end   in volume
 
 static float 	 s_colorEffectInfluence = 1.0f;
 static float 	 s_contrastEffectInfluence = 1.0f;
-static glm::vec4 s_maxDistColor = glm::vec4(0.75, 0.74f, 0.82f, 1.0f); // far : blueish
-static glm::vec4 s_minDistColor = glm::vec4(1.0f, 0.75f, 0.75f, 1.0f); // near: reddish
-static int 		 s_mixMode = 0;
+static glm::vec4 s_maxDistColor = glm::vec4(170.0f / 255.0f, 192.0f / 255.0f, 209.0f/255.0f, 1.0f); // far : blueish
+static glm::vec4 s_minDistColor = glm::vec4(255.0f / 255.0f, 156.0f / 255.0f, 156.0f/255.0f, 1.0f); // near: reddish
+static int 		 s_mixMode = 2;
 static const char* s_mixModeLabels[] = {"Multiply", "Add", "Subtract (experimental)"};
+
+static int 		 s_activeModel = 0;
+static const char* s_models[] = {"MRT Brain", "CT Head"};
 
 static float s_LMIP_threshold = FLT_MAX; // LMIP threshold 
 static bool  s_LMIP_isEnabled = false;
@@ -71,26 +74,15 @@ static float s_windowingRange = FLT_MAX;
 static float s_minDepthRange = 0.0f;
 static float s_maxDepthRange = 1.0f;
 
+
+
 //////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// MAIN ///////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-int main()
+template <class T>
+void activateVolume(VolumeData<T>& volumeData ) // set static variables
 {
-	DEBUGLOG->setAutoPrint(true);
-
-	//////////////////////////////////////////////////////////////////////////////
-	/////////////////////// VOLUME DATA LOADING //////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////
-
-	std::string file = RESOURCES_PATH;
-	file += std::string( "/CTHead/CThead");
-
-	// load data set: CT of a Head
-	VolumeData<short> volumeData = Importer::load3DData<short>(file, 256, 256, 113, 2);
-	// alternative data set: MRT of a brain; comment this line in and the above out to use 
-	// VolumeData<short> volumeData = Importer::loadBruder();
-
 	DEBUGLOG->log("File Info:");
 	DEBUGLOG->indent();
 		DEBUGLOG->log("min value: ", volumeData.min);
@@ -110,6 +102,25 @@ int main()
 	s_windowingRange = s_windowingMaxValue - s_windowingMinValue;
 	s_minValThreshold = volumeData.min;
 	s_maxValThreshold = volumeData.max;
+}
+
+int main()
+{
+	DEBUGLOG->setAutoPrint(true);
+
+	//////////////////////////////////////////////////////////////////////////////
+	/////////////////////// VOLUME DATA LOADING //////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
+
+	std::string file = RESOURCES_PATH;
+	file += std::string( "/CTHead/CThead");
+
+	// load data set: CT of a Head
+	VolumeData<short> volumeDataCTHead = Importer::load3DData<short>(file, 256, 256, 113, 2);
+	// alternative data set: MRT of a brain; comment this line in and the above out to use 
+	VolumeData<short> volumeDataMRTBrain = Importer::loadBruder();
+
+	activateVolume<short>(volumeDataCTHead);
 
 	DEBUGLOG->log("Initial ray sampling step size: ", s_rayStepSize);
 
@@ -118,7 +129,11 @@ int main()
 
 	// load into 3d texture
 	DEBUGLOG->log("Loading Volume Data to 3D-Texture.");
-	GLuint volumeTexture = loadTo3DTexture<short>(volumeData);
+	
+	GLuint volumeTextureCT = loadTo3DTexture<short>(volumeDataCTHead);
+	GLuint volumeTextureMRT =  loadTo3DTexture<short>(volumeDataMRTBrain);
+
+	GLuint volumeTexture = volumeTextureCT; // startup volume data
 
 	DEBUGLOG->log("OpenGL error state after 3D-Texture creation: ");
 	DEBUGLOG->indent(); checkGLError(true); DEBUGLOG->outdent();
@@ -255,8 +270,19 @@ int main()
 				eye += glm::inverse(view)    * glm::vec4(0.1f,0.0f,0.0f,0.0f);
 				center += glm::inverse(view) * glm::vec4(0.1f,0.0f,0.0f,0.0f);
 				break;
+			case GLFW_KEY_TAB: // switch models
+				if (s_activeModel == 0) // MRT Model
+				{
+
+				}
+				else
+				{
+
+				}
+				break;
 			default:
 				break;
+
 		}
 		ImGui_ImplGlfwGL3_KeyCallback(window,k,s,a,m);
 	};
@@ -323,6 +349,7 @@ int main()
 		}
         
 		ImGui::Checkbox("auto-rotate", &s_isRotating); // enable/disable rotating volume
+    	ImGui::ListBox("active model", &s_activeModel, s_models, IM_ARRAYSIZE(s_models), 2);
 		ImGui::PopItemWidth();
         //////////////////////////////////////////////////////////////////////////////
 
