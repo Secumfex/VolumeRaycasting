@@ -43,7 +43,6 @@
 static float s_minValue = INT_MIN; // minimal value in data set; to be overwitten after import
 static float s_maxValue = INT_MAX;  // maximal value in data set; to be overwitten after import
 
-
 static bool  s_isRotating = false; 	// initial state for rotating animation
 static float s_rayStepSize = 0.1f;  // ray sampling step size; to be overwritten after volume data import
 
@@ -51,13 +50,14 @@ static float s_rayParamEnd  = 1.0f; // parameter of uvw ray start in volume
 static float s_rayParamStart= 0.0f; // parameter of uvw ray end   in volume
 
 static float 	 s_colorEffectInfluence = 1.0f;
-static float 	 s_contrastEffectInfluence = 1.0f;
+static float 	 s_contrastEffectInfluence = 0.5f;
 static glm::vec4 s_maxDistColor = glm::vec4(170.0f / 255.0f, 192.0f / 255.0f, 209.0f/255.0f, 1.0f); // far : blueish
 static glm::vec4 s_minDistColor = glm::vec4(255.0f / 255.0f, 156.0f / 255.0f, 156.0f/255.0f, 1.0f); // near: reddish
 static int 		 s_mixMode = 2;
 static const char* s_mixModeLabels[] = {"Multiply", "Add", "Subtract (experimental)"};
 
-static int 		 s_activeModel = 0;
+static int 		 s_activeModel = 1;
+static int 	     s_lastTimeModel = 1;
 static const char* s_models[] = {"MRT Brain", "CT Head"};
 
 static float s_LMIP_threshold = FLT_MAX; // LMIP threshold 
@@ -102,6 +102,8 @@ void activateVolume(VolumeData<T>& volumeData ) // set static variables
 	s_windowingRange = s_windowingMaxValue - s_windowingMinValue;
 	s_minValThreshold = volumeData.min;
 	s_maxValThreshold = volumeData.max;
+
+
 }
 
 int main()
@@ -270,16 +272,6 @@ int main()
 				eye += glm::inverse(view)    * glm::vec4(0.1f,0.0f,0.0f,0.0f);
 				center += glm::inverse(view) * glm::vec4(0.1f,0.0f,0.0f,0.0f);
 				break;
-			case GLFW_KEY_TAB: // switch models
-				if (s_activeModel == 0) // MRT Model
-				{
-
-				}
-				else
-				{
-
-				}
-				break;
 			default:
 				break;
 
@@ -317,7 +309,7 @@ int main()
         }
         if (ImGui::CollapsingHeader("LMIP Settings"))
     	{
-			ImGui::SliderFloat("LMIP threshold", &s_LMIP_threshold, volumeData.min, volumeData.max); // LMIP threshold
+			ImGui::SliderFloat("LMIP threshold", &s_LMIP_threshold, s_minValue, s_maxValue); // LMIP threshold
 			if ( ImGui::TreeNode("experimental") )
 			{
 				ImGui::DragInt("LMIP min steps", &s_LMIP_minStepsToLocalMaximum, 1.0f, 0, 100);
@@ -350,6 +342,23 @@ int main()
         
 		ImGui::Checkbox("auto-rotate", &s_isRotating); // enable/disable rotating volume
     	ImGui::ListBox("active model", &s_activeModel, s_models, IM_ARRAYSIZE(s_models), 2);
+    	if (s_lastTimeModel != s_activeModel)
+    	{
+    		if ( s_activeModel == 0) //MRT
+    		{
+				activateVolume(volumeDataMRTBrain);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_3D, volumeTextureMRT);
+				s_lastTimeModel = 0;
+    		}
+    		else
+    		{
+    			activateVolume(volumeDataCTHead);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_3D, volumeTextureCT);
+				s_lastTimeModel = 1;
+    		}
+    	}
 		ImGui::PopItemWidth();
         //////////////////////////////////////////////////////////////////////////////
 
@@ -401,6 +410,7 @@ int main()
 		//////////////////////////////////////////////////////////////////////////////
 		
 		////////////////////////////////  RENDERING //// /////////////////////////////
+		glDisable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // this is altered by ImGui::Render(), so set it every frame
 		uvwRenderPass.render();
 		renderPass.render();
