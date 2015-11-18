@@ -1,7 +1,7 @@
 #version 430
 
 layout (triangles) in;
-layout (line_strip, max_vertices=12) out;
+layout (triangle_strip, max_vertices=4) out;
 
 in VertexData {
 	vec2 texCoord;
@@ -29,48 +29,72 @@ vec4 centerPos(vec4 pos1, vec4 pos2, vec4 pos3)
 
 void main()
 {
-	mat4 mvp = projection * view * model;
-
 	vec4 pos1 = vec4(gl_in[0].gl_Position.xyz, 1.0);
 	vec4 pos2 = vec4(gl_in[1].gl_Position.xyz, 1.0);
 	vec4 pos3 = vec4(gl_in[2].gl_Position.xyz, 1.0);
 	
-	vec4 norm1 = vec4(VertexIn[0].normal, 0.0);
-	vec4 norm2 = vec4(VertexIn[1].normal, 0.0);
-	vec4 norm3 = vec4(VertexIn[2].normal, 0.0);
-
 	vec4 center = centerPos(pos1,pos2,pos3);
-	vec4 centNorm = normalize(mix(norm1,norm3,0.5));
+	vec4 centerView = (view * model * center);
 
-	gl_Position = mvp * pos1;
+	vec4 point = vec4(-strength, 0.0, 0.0, 0.0) + centerView;
+	VertexOut.texCoord = vec2(0.0,0.0);
+	VertexOut.position = point.xyz;
+	VertexOut.normal = vec3(0.0, 0.0, -1.0);
+	gl_Position = projection * point;
 	EmitVertex();
-	gl_Position = mvp * ( center + strength * centNorm );
+
+	point = vec4(-strength, strength*2.0, 0.0, 0.0) + centerView;
+	VertexOut.texCoord = vec2(0.0,1.0);
+	VertexOut.position = point.xyz;
+	VertexOut.normal = vec3(0.0, 0.0, -1.0);
+	gl_Position = projection * point;
 	EmitVertex();
-	gl_Position = mvp * pos2;
+	
+	point = vec4(strength, 0.0, 0.0, 0.0) + centerView;
+	VertexOut.texCoord = vec2(1.0,0.0);
+	VertexOut.position = point.xyz;
+	VertexOut.normal = vec3(0.0, 0.0, -1.0);
+	gl_Position = projection * point;
 	EmitVertex();
-	// gl_Position = mvp * pos1;
-	// EmitVertex();
+	
+	point = ( vec4(strength, strength*2.0, 0.0, 0.0)  + centerView);
+	VertexOut.texCoord = vec2(1.0,1.0);
+	VertexOut.position = point.xyz;
+	VertexOut.normal = vec3(0.0, 0.0, -1.0);
+	gl_Position = projection * point ;
+	EmitVertex();
+
 	EndPrimitive();
 
-	gl_Position = mvp * pos2;
-	EmitVertex();
-	gl_Position = mvp * ( center + strength * centNorm );
-	EmitVertex();
-	gl_Position = mvp * pos3;
-	EmitVertex();
+	// gl_Position = mvp * pos1;
+	// EmitVertex();
+	// gl_Position = mvp * ( center + strength * centNorm );
+	// EmitVertex();
 	// gl_Position = mvp * pos2;
 	// EmitVertex();
-	EndPrimitive();
+	// // gl_Position = mvp * pos1;
+	// // EmitVertex();
+	// EndPrimitive();
 
-	gl_Position = mvp * pos1;
-	EmitVertex();
-	gl_Position = mvp * ( center + strength * centNorm );
-	EmitVertex();
-	gl_Position = mvp * pos3;
-	EmitVertex();
+	// gl_Position = mvp * pos2;
+	// EmitVertex();
+	// gl_Position = mvp * ( center + strength * centNorm );
+	// EmitVertex();
+	// gl_Position = mvp * pos3;
+	// EmitVertex();
+	// // gl_Position = mvp * pos2;
+	// // EmitVertex();
+	// EndPrimitive();
+
 	// gl_Position = mvp * pos1;
 	// EmitVertex();
-	EndPrimitive();
+	// gl_Position = mvp * ( center + strength * centNorm );
+	// EmitVertex();
+	// gl_Position = mvp * pos3;
+	// EmitVertex();
+	// // gl_Position = mvp * pos1;
+	// // EmitVertex();
+	// EndPrimitive();
 
 	// gl_Position = mvp * pos1;
 	// EmitVertex();
