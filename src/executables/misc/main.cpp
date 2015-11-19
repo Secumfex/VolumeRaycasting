@@ -20,11 +20,59 @@ static bool s_isRotating = false;
 
 static glm::vec4 s_color = glm::vec4(0.75, 0.74f, 0.82f, 1.0f); // far : blueish
 
-static float s_strength = 0.0f;
+static float s_strength = 0.1f;
 
 //////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// MAIN ///////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+static GLuint s_vectorTexture = 0;
+static std::vector<float> s_vectorTexData;
+static const int VECTOR_TEXTURE_SIZE = 128;
+void updateVectorTexture(double elapsedTime)
+{
+	// first time, create it
+	if (s_vectorTexture == 0)
+	{
+		s_vectorTexData.resize(VECTOR_TEXTURE_SIZE*VECTOR_TEXTURE_SIZE*3, 0.0);
+		DEBUGLOG->log("VectorSize: ", s_vectorTexData.size());
+
+		glGenTextures(1, &s_vectorTexture);
+		glBindTexture(GL_TEXTURE_2D, s_vectorTexture);
+		glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB8, VECTOR_TEXTURE_SIZE, VECTOR_TEXTURE_SIZE);	
+	
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	else
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, s_vectorTexture);
+
+		auto evaluate = [&](float t, float offsetX, float offsetY){
+			float x = sin(t + offsetX) * 0.5f + 0.5f;
+			float y = cos(t + offsetY) * 0.5f + 0.5f;
+			float z = 0.0f;
+			return glm::vec3(x,y,z);
+		};
+
+		for (int i = 0; i < VECTOR_TEXTURE_SIZE; i++)
+		{
+			for (int j = 0; j < VECTOR_TEXTURE_SIZE; j++)
+			{
+				auto vector = evaluate( (float) elapsedTime, ((float) i / (float) VECTOR_TEXTURE_SIZE) * 5.0f , ((float) j / (float) VECTOR_TEXTURE_SIZE) * 5.0f );
+				s_vectorTexData[ (i * VECTOR_TEXTURE_SIZE * 3) + (j * 3 )] = vector.x;
+				s_vectorTexData[ (i * VECTOR_TEXTURE_SIZE * 3) + (j * 3 + 1)] = vector.y;
+				s_vectorTexData[ (i * VECTOR_TEXTURE_SIZE * 3) + (j * 3 + 2)] = vector.z;
+			}
+		}
+
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0,0, VECTOR_TEXTURE_SIZE, VECTOR_TEXTURE_SIZE, GL_RGB, GL_FLOAT, &s_vectorTexData[0] );
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+}
 
 int main()
 {
@@ -209,6 +257,12 @@ int main()
 		geomShader.update(   "view", view);
 		geomShader.update(   "model", turntable.getRotationMatrix() * model);
 
+		updateVectorTexture(elapsedTime);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, s_vectorTexture);
+		geomShader.update("tex", 0);
+		geomShader.update("blendColor", 1.0);
 		geomShader.update("color", s_color);
 		geomShader.update("strength", s_strength);
 		//////////////////////////////////////////////////////////////////////////////

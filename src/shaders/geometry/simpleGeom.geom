@@ -15,11 +15,18 @@ out VertexData {
 	vec3 normal;
 } VertexOut;
 
+out vec2 passUVCoord;
+
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform	float strength;
+// uniform float stiffness;
+uniform sampler2D vectorTexture;
 
+/**
+ * @brief not really the center, but whatever
+ */
 vec4 centerPos(vec4 pos1, vec4 pos2, vec4 pos3)
 {
 	vec4 dir1 = pos2 - pos1;
@@ -36,15 +43,21 @@ void main()
 	vec4 center = centerPos(pos1,pos2,pos3);
 	vec4 centerView = (view * model * center);
 
+	vec4 offset = (texture(vectorTexture,VertexIn[0].texCoord) * 2.0 - 1.0 )* strength;
+
+	//bottom left
 	vec4 point = vec4(-strength, 0.0, 0.0, 0.0) + centerView;
 	VertexOut.texCoord = vec2(0.0,0.0);
+	passUVCoord = vec2(0.0,0.0);
 	VertexOut.position = point.xyz;
 	VertexOut.normal = vec3(0.0, 0.0, -1.0);
 	gl_Position = projection * point;
 	EmitVertex();
 
 	point = vec4(-strength, strength*2.0, 0.0, 0.0) + centerView;
+	point += offset;
 	VertexOut.texCoord = vec2(0.0,1.0);
+	passUVCoord = vec2(0.0,1.0);
 	VertexOut.position = point.xyz;
 	VertexOut.normal = vec3(0.0, 0.0, -1.0);
 	gl_Position = projection * point;
@@ -52,13 +65,16 @@ void main()
 	
 	point = vec4(strength, 0.0, 0.0, 0.0) + centerView;
 	VertexOut.texCoord = vec2(1.0,0.0);
+	passUVCoord  = vec2(1.0,0.0);
 	VertexOut.position = point.xyz;
 	VertexOut.normal = vec3(0.0, 0.0, -1.0);
 	gl_Position = projection * point;
 	EmitVertex();
 	
 	point = ( vec4(strength, strength*2.0, 0.0, 0.0)  + centerView);
+	point += offset;
 	VertexOut.texCoord = vec2(1.0,1.0);
+	passUVCoord  = vec2(1.0,1.0);
 	VertexOut.position = point.xyz;
 	VertexOut.normal = vec3(0.0, 0.0, -1.0);
 	gl_Position = projection * point ;

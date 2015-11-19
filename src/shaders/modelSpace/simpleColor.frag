@@ -24,7 +24,14 @@ layout(location = 3) out vec4 fragNormal;
 
 void main()
 {
-	fragColor = color;
+	if (blendColor != 0.0)
+	{
+		vec4 tex = texture(tex, passUVCoord);
+		fragColor = mix(color, tex, blendColor);
+	}
+	else{
+		fragColor = color;
+	}
     fragPosition = vec4(passPosition,1);
     fragUVCoord = vec4(passUVCoord,0,0);
     fragNormal = vec4(passNormal,0);
