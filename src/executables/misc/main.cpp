@@ -12,6 +12,8 @@
 #include <UI/imguiTools.h>
 #include <UI/Turntable.h>
 
+#include <Importing/TextureTools.h>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -20,12 +22,14 @@ static bool s_isRotating = false;
 
 static glm::vec4 s_color = glm::vec4(0.75, 0.74f, 0.82f, 1.0f); // far : blueish
 
-static float s_strength = 0.1f;
+static float s_strength = 0.05f;
 
 //////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// MAIN ///////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 static GLuint s_vectorTexture = 0;
+static GLuint s_texHandle = 0;
+
 static std::vector<float> s_vectorTexData;
 static const int VECTOR_TEXTURE_SIZE = 128;
 void updateVectorTexture(double elapsedTime)
@@ -99,10 +103,16 @@ int main()
 	/// perspective projection is experimental; yields weird warping effects due to vertex interpolation of uv-coordinates
 	glm::mat4 perspective = glm::perspective(glm::radians(65.f), getRatio(window), 0.1f, 10.f);
 
-	// create Sphere
-	// Sphere sphere;
-	Grid sphere(10,10,0.1f,0.1f);
-	// Volume sphere;
+	// create object
+	// Sphere grid;
+	Grid grid(10,10,0.1f,0.1f,true);
+	// Volume grid;
+
+	// load grass texture
+	s_texHandle = TextureTools::loadTexture(RESOURCES_PATH +  std::string( "/grass.png"));
+	glBindTexture(GL_TEXTURE_2D, s_texHandle);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	/////////////////////// 	Renderpass     ///////////////////////////
 	DEBUGLOG->log("Shader Compilation: volume uvw coords"); DEBUGLOG->indent();
@@ -119,7 +129,7 @@ int main()
 	RenderPass renderPass(&shaderProgram, &fbo);
 	renderPass.addEnable(GL_DEPTH_TEST);
 	renderPass.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	renderPass.addRenderable(&sphere);
+	renderPass.addRenderable(&grid);
 
 	ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/finalCompositing.frag");
 	// ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/simpleAlphaTexture.frag");
@@ -133,7 +143,12 @@ int main()
 	ShaderProgram geomShader("/modelSpace/geometry.vert", "/modelSpace/simpleColor.frag", "/geometry/simpleGeom.geom");
 	RenderPass geom(&geomShader, 0);
 	geom.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	geom.addRenderable(&sphere);
+	geom.addRenderable(&grid);
+	geom.addEnable(GL_DEPTH_TEST);
+	geom.addEnable(GL_ALPHA_TEST);
+	geom.addEnable(GL_BLEND);
+
+	glAlphaFunc(GL_GREATER, 0);
 
 	geomShader.update("projection", perspective);
 
@@ -261,8 +276,12 @@ int main()
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, s_vectorTexture);
-		geomShader.update("tex", 0);
-		geomShader.update("blendColor", 1.0);
+
+	//	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // this is altered by ImGui::Render(), so reset it every frame
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, s_texHandle);
+		geomShader.update("tex", 1);
+		geomShader.update("blendColor", 2.0);
 		geomShader.update("color", s_color);
 		geomShader.update("strength", s_strength);
 		//////////////////////////////////////////////////////////////////////////////
@@ -271,7 +290,7 @@ int main()
 		// glActiveTexture(GL_TEXTURE0);
 		// glBindTexture(GL_TEXTURE_2D, fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0)); // color
 		// glActiveTexture(GL_TEXTURE1);
-		// glBindTexture(GL_TEXTURE_2D, fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1)); // normal
+		// glBindTexture(GL_TEXTURE_2D, fbo.getColorAttachmeHntTextureHandle(GL_COLOR_ATTACHMENT1)); // normal
 		// glActiveTexture(GL_TEXTURE2);
 		// glBindTexture(GL_TEXTURE_2D, fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2)); // position
 		// glActiveTexture(GL_TEXTURE0);
@@ -287,7 +306,7 @@ int main()
 
 		ImGui::Render();
 		glDisable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // this is altered by ImGui::Render(), so reset it every frame
+		glBlendFunc(GL_ONE, GL_ZERO); // this is altered by ImGui::Render(), so reset it every frame
 		//////////////////////////////////////////////////////////////////////////////
 
 	});

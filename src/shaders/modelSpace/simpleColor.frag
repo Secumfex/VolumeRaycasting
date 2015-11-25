@@ -26,12 +26,16 @@ void main()
 {
 	if (blendColor != 0.0)
 	{
-		vec4 tex = texture(tex, passUVCoord);
-		fragColor = mix(color, tex, blendColor);
+		vec4 tex = texture(tex, vec2(passUVCoord.x, 1.0 - passUVCoord.y));
+//		fragColor = mix(color, tex, blendColor);
+		fragColor = vec4(tex.r, tex.g, tex.b,tex.a);
+		// fragColor = vec4(tex.r * tex.a, tex.g * tex.a, tex.b * tex.a,tex.a);
 	}
-	else{
+	else
+	{
 		fragColor = color;
 	}
+
     fragPosition = vec4(passPosition,1);
     fragUVCoord = vec4(passUVCoord,0,0);
     fragNormal = vec4(passNormal,0);

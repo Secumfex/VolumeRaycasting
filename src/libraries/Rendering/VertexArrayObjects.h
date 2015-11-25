@@ -91,7 +91,7 @@ public:
     /**
     * @brief default Constructor
     */
-    Grid(unsigned int fieldsX = 10, unsigned int fieldsY = 10, float sizeX = 1.0f, float sizeY = 1.0f);
+    Grid(unsigned int fieldsX = 10, unsigned int fieldsY = 10, float sizeX = 1.0f, float sizeY = 1.0f, bool centered = false);
     
     /**
     * @brief Deconstructor

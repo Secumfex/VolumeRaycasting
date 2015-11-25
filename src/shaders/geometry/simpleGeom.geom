@@ -43,8 +43,10 @@ void main()
 	vec4 center = centerPos(pos1,pos2,pos3);
 	vec4 centerView = (view * model * center);
 
-	vec4 offset = (texture(vectorTexture,VertexIn[0].texCoord) * 2.0 - 1.0 )* strength;
-
+	vec4 offset = ( texture(vectorTexture,VertexIn[0].texCoord ) * 2.0 - 1.0 ) * strength;
+	offset.z = offset.y;
+	offset.y = 0;
+	
 	//bottom left
 	vec4 point = vec4(-strength, 0.0, 0.0, 0.0) + centerView;
 	VertexOut.texCoord = vec2(0.0,0.0);
