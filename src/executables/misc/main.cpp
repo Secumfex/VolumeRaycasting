@@ -140,7 +140,7 @@ int main()
 	compositing.addRenderable(&quad);
 
 	// Geometry test shader
-	ShaderProgram geomShader("/modelSpace/geometry.vert", "/modelSpace/simpleColor.frag", "/geometry/simpleGeom.geom");
+	ShaderProgram geomShader("/modelSpace/geometry.vert", "/modelSpace/simpleLighting.frag", "/geometry/simpleGeom.geom");
 	RenderPass geom(&geomShader, 0);
 	geom.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	geom.addRenderable(&grid);

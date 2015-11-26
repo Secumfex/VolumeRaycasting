@@ -55,7 +55,7 @@ void main()
 	VertexOut.texCoord = vec2(0.0,0.0);
 	VertexOut.position = point.xyz;
 	// VertexOut.normal = vec3(0.0, 0.0, 1.0);
-	VertexOut.normal = normalize(VertexIn[0].normal + offset.xyz);
+	VertexOut.normal = normalize(VertexIn[0].normal);
 	passUVCoord = VertexOut.texCoord;
 	passNormal = VertexOut.normal;
 	passPosition = VertexOut.position;
@@ -68,7 +68,7 @@ void main()
 	VertexOut.texCoord = vec2(0.0,1.0);
 	VertexOut.position = point.xyz;
 	// VertexOut.normal = vec3(0.0, 0.0, 1.0);
-	VertexOut.normal = normalize(VertexIn[0].normal + offset.xyz);
+	VertexOut.normal = normalize(VertexIn[0].normal + offset.xyz * 4.0);
 	passUVCoord = VertexOut.texCoord;
 	passNormal = VertexOut.normal;
 	passPosition = VertexOut.position;
@@ -79,7 +79,7 @@ void main()
 	VertexOut.texCoord = vec2(1.0,0.0);
 	VertexOut.position = point.xyz;
 	// VertexOut.normal = vec3(0.0, 0.0, 1.0);
-	VertexOut.normal = normalize(VertexIn[0].normal + offset.xyz);
+	VertexOut.normal = normalize(VertexIn[0].normal);
 	passUVCoord = VertexOut.texCoord;
 	passNormal = VertexOut.normal;
 	passPosition = VertexOut.position;
@@ -91,7 +91,7 @@ void main()
 	VertexOut.texCoord = vec2(1.0,1.0);
 	VertexOut.position = point.xyz;
 	// VertexOut.normal = vec3(0.0, 0.0, 1.0);
-	VertexOut.normal = normalize(VertexIn[0].normal + offset.xyz);	
+	VertexOut.normal = normalize(VertexIn[0].normal + offset.xyz * 4.0);	
 
 	passUVCoord = VertexOut.texCoord;
 	passNormal = VertexOut.normal;
