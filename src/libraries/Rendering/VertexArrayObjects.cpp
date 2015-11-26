@@ -490,7 +490,7 @@ void Sphere::draw()
     glDrawArrays(m_mode, 0, m_positions.m_size);
 }
 
-Grid::Grid(unsigned int fieldsX, unsigned  int fieldsY, float sizeX, float sizeY)
+Grid::Grid(unsigned int fieldsX, unsigned  int fieldsY, float sizeX, float sizeY, bool centered)
 {
     glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
@@ -519,6 +519,9 @@ Grid::Grid(unsigned int fieldsX, unsigned  int fieldsY, float sizeX, float sizeY
     int posIdx = 0;
     int uvIdx = 0;
 
+    float centerOffsetX = 0.0f;
+    float centerOffsetY = 0.0f;
+
     float x = 0.0f;
     float y = 0.0f;
     float u = 0.0f;
@@ -528,6 +531,13 @@ Grid::Grid(unsigned int fieldsX, unsigned  int fieldsY, float sizeX, float sizeY
     float dy = sizeY;
     float du = 1.0f/((float)(fieldsX));
     float dv = 1.0f/((float)(fieldsY));
+
+    if (centered)
+    {
+        centerOffsetX = - ( (float) fieldsX / 2.0f) * dx;
+        centerOffsetY = - ( (float) fieldsY / 2.0f) * dy;
+    }
+
     for (int iY = 0; iY <= fieldsY; iY++)
     {
         x = 0.0f;
@@ -535,8 +545,8 @@ Grid::Grid(unsigned int fieldsX, unsigned  int fieldsY, float sizeX, float sizeY
         for (int iX = 0; iX <= fieldsX; iX++)
         {
 
-            positions[posIdx + 0] = x;
-            positions[posIdx + 1] = y;
+            positions[posIdx + 0] = x + centerOffsetX;
+            positions[posIdx + 1] = y + centerOffsetY;
 
             // DEBUGLOG->log("idx : ", posIdx);
             // DEBUGLOG->log("posX: ", x);
