@@ -16,6 +16,8 @@ out VertexData {
 } VertexOut;
 
 out vec2 passUVCoord;
+out vec3 passPosition;
+out vec3 passNormal;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -43,40 +45,54 @@ void main()
 	vec4 center = centerPos(pos1,pos2,pos3);
 	vec4 centerView = (view * model * center);
 
-	vec4 offset = (texture(vectorTexture,VertexIn[0].texCoord) * 2.0 - 1.0 )* strength;
+	vec4 offset = (texture(vectorTexture,VertexIn[0].texCoord) * 2.0 - 1.0 ) * strength;
+	offset.z = offset.y;
+	offset.y = 0.0;
+	offset.w = 0.0;
 
 	//bottom left
 	vec4 point = vec4(-strength, 0.0, 0.0, 0.0) + centerView;
 	VertexOut.texCoord = vec2(0.0,0.0);
-	passUVCoord = vec2(0.0,0.0);
 	VertexOut.position = point.xyz;
-	VertexOut.normal = vec3(0.0, 0.0, -1.0);
+	VertexOut.normal = vec3(0.0, 0.0, 1.0);
+	passUVCoord = VertexOut.texCoord;
+	passNormal = VertexOut.normal;
+	passPosition = VertexOut.position;
+
 	gl_Position = projection * point;
 	EmitVertex();
 
 	point = vec4(-strength, strength*2.0, 0.0, 0.0) + centerView;
 	point += offset;
 	VertexOut.texCoord = vec2(0.0,1.0);
-	passUVCoord = vec2(0.0,1.0);
 	VertexOut.position = point.xyz;
-	VertexOut.normal = vec3(0.0, 0.0, -1.0);
+	VertexOut.normal = vec3(0.0, 0.0, 1.0);
+	passUVCoord = VertexOut.texCoord;
+	passNormal = VertexOut.normal;
+	passPosition = VertexOut.position;
 	gl_Position = projection * point;
 	EmitVertex();
 	
 	point = vec4(strength, 0.0, 0.0, 0.0) + centerView;
 	VertexOut.texCoord = vec2(1.0,0.0);
-	passUVCoord  = vec2(1.0,0.0);
 	VertexOut.position = point.xyz;
-	VertexOut.normal = vec3(0.0, 0.0, -1.0);
+	VertexOut.normal = vec3(0.0, 0.0, 1.0);
+	passUVCoord = VertexOut.texCoord;
+	passNormal = VertexOut.normal;
+	passPosition = VertexOut.position;
 	gl_Position = projection * point;
 	EmitVertex();
 	
 	point = ( vec4(strength, strength*2.0, 0.0, 0.0)  + centerView);
 	point += offset;
 	VertexOut.texCoord = vec2(1.0,1.0);
-	passUVCoord  = vec2(1.0,1.0);
 	VertexOut.position = point.xyz;
-	VertexOut.normal = vec3(0.0, 0.0, -1.0);
+	VertexOut.normal = vec3(0.0, 0.0, 1.0);
+
+	passUVCoord = VertexOut.texCoord;
+	passNormal = VertexOut.normal;
+	passPosition = VertexOut.position;
+	
 	gl_Position = projection * point ;
 	EmitVertex();
 
