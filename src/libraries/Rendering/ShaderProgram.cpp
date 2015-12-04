@@ -225,13 +225,6 @@ int ShaderProgram::addBuffer(const std::string &bufferName)
 	return m_bufferMap[bufferName];
 }
 
-// int ShaderProgram::addTexture(const std::string &textureName, const std::string &path)
-// {	
-// 	GLuint textureHandle = Texture::load(path);
-// 	m_textureMap[textureName] = textureHandle;
-// 	return textureHandle;
-// }
-
 void ShaderProgram::addTexture(const std::string &textureName, GLuint textureHandle)
 {	
 	m_textureMap[textureName] = textureHandle;
@@ -417,15 +410,15 @@ void ShaderProgram::use()
 {	
 	int i = 0;
 
-	// for(auto texture : m_textureMap)
-	// {	
-	// 	std::cout << "name: " << texture.first << ", active texture:" << i << ", uniform: " << uniform(texture.first) << ", handle: " << texture.second << std::endl;
+	for(auto texture : m_textureMap)
+	{	
+		// std::cout << "name: " << texture.first << ", active texture:" << i << ", uniform: " << uniform(texture.first) << ", handle: " << texture.second << std::endl;
 
-	// 	glUniform1i(uniform(texture.first), i);
-	// 	glActiveTexture(GL_TEXTURE0+i);
-	// 	glBindTexture(GL_TEXTURE_2D,texture.second);
-	// 	i++;
-	// }
+		update( texture.first, i );
+		glActiveTexture(GL_TEXTURE0+i);
+		glBindTexture(GL_TEXTURE_2D, texture.second);
+		i++;
+	}
 
 	glUseProgram(m_shaderProgramHandle);
 }

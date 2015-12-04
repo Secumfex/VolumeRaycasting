@@ -17,10 +17,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+ #include "misc.hpp"
+
 ////////////////////// PARAMETERS /////////////////////////////
 static bool s_isRotating = false;
 
-static glm::vec4 s_color = glm::vec4(0.75, 0.74f, 0.82f, 1.0f); // far : blueish
+static glm::vec4 s_color = glm::vec4(0.45, 0.44f, 0.87f, 1.0f); // far : blueish
 static glm::vec4 s_lightPos = glm::vec4(2.0,2.0,2.0,1.0);
 
 static float s_strength = 0.05f;
@@ -28,56 +30,6 @@ static float s_strength = 0.05f;
 //////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// MAIN ///////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-static GLuint s_vectorTexture = 0;
-static GLuint s_texHandle = 0;
-
-static std::vector<float> s_vectorTexData;
-static const int VECTOR_TEXTURE_SIZE = 128;
-void updateVectorTexture(double elapsedTime)
-{
-	// first time, create it
-	if (s_vectorTexture == 0)
-	{
-		s_vectorTexData.resize(VECTOR_TEXTURE_SIZE*VECTOR_TEXTURE_SIZE*3, 0.0);
-		DEBUGLOG->log("VectorSize: ", s_vectorTexData.size());
-
-		glGenTextures(1, &s_vectorTexture);
-		glBindTexture(GL_TEXTURE_2D, s_vectorTexture);
-		glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB8, VECTOR_TEXTURE_SIZE, VECTOR_TEXTURE_SIZE);	
-	
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-	else
-	{
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, s_vectorTexture);
-
-		auto evaluate = [&](float t, float offsetX, float offsetY){
-			float x = sin(t + offsetX) * 0.5f + 0.5f;
-			float y = cos(t + offsetY) * 0.5f + 0.5f;
-			float z = 0.0f;
-			return glm::vec3(x,y,z);
-		};
-
-		for (int i = 0; i < VECTOR_TEXTURE_SIZE; i++)
-		{
-			for (int j = 0; j < VECTOR_TEXTURE_SIZE; j++)
-			{
-				auto vector = evaluate( (float) elapsedTime, ((float) i / (float) VECTOR_TEXTURE_SIZE) * 5.0f , ((float) j / (float) VECTOR_TEXTURE_SIZE) * 5.0f );
-				s_vectorTexData[ (i * VECTOR_TEXTURE_SIZE * 3) + (j * 3 )] = vector.x;
-				s_vectorTexData[ (i * VECTOR_TEXTURE_SIZE * 3) + (j * 3 + 1)] = vector.y;
-				s_vectorTexData[ (i * VECTOR_TEXTURE_SIZE * 3) + (j * 3 + 2)] = vector.z;
-			}
-		}
-
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0,0, VECTOR_TEXTURE_SIZE, VECTOR_TEXTURE_SIZE, GL_RGB, GL_FLOAT, &s_vectorTexData[0] );
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-}
 
 int main()
 {
@@ -88,7 +40,7 @@ int main()
 	//////////////////////////////////////////////////////////////////////////////
 
 	// create window and opengl context
-	auto window = generateWindow(800,800);
+	auto window = generateWindow(800,600);
 
 	//////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////// RENDERING  ///////////////////////////////////
@@ -105,13 +57,9 @@ int main()
 	glm::mat4 perspective = glm::perspective(glm::radians(65.f), getRatio(window), 0.1f, 10.f);
 
 	// create object
-	// Sphere grid;
-	Grid grid(10,10,0.1f,0.1f,true);
-	// Volume grid;
-
-	// load grass texture
-	s_texHandle = TextureTools::loadTexture(RESOURCES_PATH +  std::string( "/grass.png"));
-	glBindTexture(GL_TEXTURE_2D, s_texHandle);
+	// Sphere object;
+	// Grid object(10,10,0.1f,0.1f,true);
+	Volume object;
 
 	/////////////////////// 	Renderpass     ///////////////////////////
 	DEBUGLOG->log("Shader Compilation: volume uvw coords"); DEBUGLOG->indent();
@@ -119,40 +67,30 @@ int main()
 	shaderProgram.update("model", model);
 	shaderProgram.update("view", view);
 	shaderProgram.update("projection", perspective);
-	shaderProgram.update("color", glm::vec4(1.0f,0.0f,0.0f,1.0f));
+	shaderProgram.update("color", s_color);
 
-	DEBUGLOG->log("FrameBufferObject Creation: volume uvw coords"); DEBUGLOG->indent();
+	DEBUGLOG->log("FrameBufferObject Creation: GBuffer"); DEBUGLOG->indent();
 	FrameBufferObject fbo(getResolution(window).x, getResolution(window).y);
 	FrameBufferObject::s_internalFormat  = GL_RGBA32F; // to allow arbitrary values in G-Buffer
 	fbo.addColorAttachments(4); DEBUGLOG->outdent();   // G-Buffer
 	FrameBufferObject::s_internalFormat  = GL_RGBA;	   // restore default
-
+	
 	RenderPass renderPass(&shaderProgram, &fbo);
 	renderPass.addEnable(GL_DEPTH_TEST);
 	renderPass.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	renderPass.addRenderable(&grid);
+	renderPass.addRenderable(&object);
 
-	ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/finalCompositing.frag");
-	// ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/simpleAlphaTexture.frag");
+	// ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/finalCompositing.frag");
+	ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/npr1.frag");
+	compShader.addTexture("colorMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+	compShader.addTexture("normalMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
+	compShader.addTexture("positionMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
 
 	Quad quad;
 	RenderPass compositing(&compShader, 0);
+	compositing.setClearColor(0.5,0.5,0.5,1.0);
 	compositing.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	compositing.addRenderable(&quad);
-
-	// Geometry test shader
-	ShaderProgram geomShader("/modelSpace/geometry.vert", "/modelSpace/simpleLighting.frag", "/geometry/simpleGeom.geom");
-	RenderPass geom(&geomShader, 0);
-	geom.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	geom.addRenderable(&grid);
-	geom.addEnable(GL_DEPTH_TEST);
-	geom.addEnable(GL_ALPHA_TEST);
-	geom.addEnable(GL_BLEND);
-
-	glAlphaFunc(GL_GREATER, 0);
-
-	geomShader.update("projection", perspective);
-
 
 	//////////////////////////////////////////////////////////////////////////////
 	///////////////////////    GUI / USER INPUT   ////////////////////////////////
@@ -266,44 +204,18 @@ int main()
 				
 		////////////////////////  SHADER / UNIFORM UPDATING //////////////////////////
 		// update view related uniforms
-		shaderProgram.update(   "view", view);
-		shaderProgram.update(   "model", turntable.getRotationMatrix() * model);
+		shaderProgram.update("color", s_color);
+		shaderProgram.update( "view", view);
+		shaderProgram.update( "model", turntable.getRotationMatrix() * model);
 
-		geomShader.update(   "view", view);
-		geomShader.update(   "model", turntable.getRotationMatrix() * model);
-		compShader.update(   "vLightPos", view * turntable.getRotationMatrix() * s_lightPos);
-
-		updateVectorTexture(elapsedTime);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, s_vectorTexture);
-
-	//	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // this is altered by ImGui::Render(), so reset it every frame
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, s_texHandle);
-		geomShader.update("tex", 1);
-		geomShader.update("blendColor", 2.0);
-		geomShader.update("color", s_color);
-		geomShader.update("strength", s_strength);
+		compShader.update("vLightPos", view * turntable.getRotationMatrix() * s_lightPos);
+		compShader.update("strength", s_strength);
 		//////////////////////////////////////////////////////////////////////////////
 		
 		////////////////////////////////  RENDERING //// /////////////////////////////
-		// glActiveTexture(GL_TEXTURE0);
-		// glBindTexture(GL_TEXTURE_2D, fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0)); // color
-		// glActiveTexture(GL_TEXTURE1);
-		// glBindTexture(GL_TEXTURE_2D, fbo.getColorAttachmeHntTextureHandle(GL_COLOR_ATTACHMENT1)); // normal
-		// glActiveTexture(GL_TEXTURE2);
-		// glBindTexture(GL_TEXTURE_2D, fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2)); // position
-		// glActiveTexture(GL_TEXTURE0);
+		renderPass.render();
 
-		// compShader.update("colorMap",    0);
-		// compShader.update("normalMap",   1);
-		// compShader.update("positionMap", 2);
-
-		// renderPass.render();
-		// compositing.render();
-
-		geom.render();
+		compositing.render();
 
 		ImGui::Render();
 		glDisable(GL_BLEND);
