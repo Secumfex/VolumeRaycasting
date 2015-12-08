@@ -59,10 +59,20 @@ int main()
 	// create object
 	// Sphere object;
 	// Grid object(10,10,0.1f,0.1f,true);
-	Volume object;
+	
+	float object_size = 1.0f;
+	
+	std::vector<Renderable* > objects;
+	int numObjects = 4;
+	for ( int i = 0; i < numObjects; i++)
+	{
+		objects.push_back(new Volume(object_size));
+		object_size *= 0.75f;
+	}
+	// Volume object(object_size);
 
 	/////////////////////// 	Renderpass     ///////////////////////////
-	DEBUGLOG->log("Shader Compilation: volume uvw coords"); DEBUGLOG->indent();
+	DEBUGLOG->log("Shader Compilation: GBuffer shader"); DEBUGLOG->indent();
 	ShaderProgram shaderProgram("/modelSpace/GBuffer.vert", "/modelSpace/GBuffer.frag"); DEBUGLOG->outdent();
 	shaderProgram.update("model", model);
 	shaderProgram.update("view", view);
@@ -74,23 +84,59 @@ int main()
 	FrameBufferObject::s_internalFormat  = GL_RGBA32F; // to allow arbitrary values in G-Buffer
 	fbo.addColorAttachments(4); DEBUGLOG->outdent();   // G-Buffer
 	FrameBufferObject::s_internalFormat  = GL_RGBA;	   // restore default
-	
+
 	RenderPass renderPass(&shaderProgram, &fbo);
 	renderPass.addEnable(GL_DEPTH_TEST);
 	renderPass.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	renderPass.addRenderable(&object);
+	
+	int num_depth_buffers = 3;
+	int num_color_attachments = 4;
 
+	FrameBufferObject::s_internalFormat  = GL_RGBA32F; // to allow arbitrary values in G-Buffer
+	DepthPeelingBuffers depthPeelingBuffers(getResolution(window).x, getResolution(window).y,
+		num_depth_buffers,
+		num_color_attachments);
+	FrameBufferObject::s_internalFormat  = GL_RGBA;	   // restore default
+
+	DEBUGLOG->log("Shader Compilation: depth peeling shader"); DEBUGLOG->indent();
+	ShaderProgram depthPeelingShader("/modelSpace/GBuffer.vert", "/modelSpace/dpGBuffer.frag");
+	depthPeelingShader.update("model", model);
+	depthPeelingShader.update("view", view);
+	depthPeelingShader.update("projection", perspective);
+	depthPeelingShader.update("color", s_color);
+	DEBUGLOG->outdent();
+
+	DEBUGLOG->log("FrameBufferObject Creation: depth peeling framebuffers"); DEBUGLOG->indent();
+	RenderPass depthPeel(&depthPeelingShader, depthPeelingBuffers.m_fbos[0] );
+	depthPeel.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	depthPeel.addEnable(GL_DEPTH_TEST);
+	DEBUGLOG->outdent();
+
+	// renderPass.addRenderable(&object);
+	for (auto r : objects )
+	{
+		renderPass.addRenderable(r);
+		depthPeel.addRenderable(r);
+	}
+
+	DEBUGLOG->log("Shader Compilation: compositing"); DEBUGLOG->indent();
 	// ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/finalCompositing.frag");
 	ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/npr1.frag");
 	compShader.addTexture("colorMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
 	compShader.addTexture("normalMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
 	compShader.addTexture("positionMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
+	DEBUGLOG->outdent();
 
 	Quad quad;
 	RenderPass compositing(&compShader, 0);
 	compositing.setClearColor(0.5,0.5,0.5,1.0);
 	compositing.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	compositing.addRenderable(&quad);
+
+	ShaderProgram texShader("/screenSpace/fullscreen.vert", "/screenSpace/simpleAlphaTexture.frag");
+	RenderPass showTexture(&texShader, 0);
+	texShader.addTexture("tex", depthPeelingBuffers.m_fbos[1]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+	showTexture.addRenderable(&quad);
 
 	//////////////////////////////////////////////////////////////////////////////
 	///////////////////////    GUI / USER INPUT   ////////////////////////////////
@@ -215,7 +261,39 @@ int main()
 		////////////////////////////////  RENDERING //// /////////////////////////////
 		renderPass.render();
 
-		compositing.render();
+		depthPeelingShader.update("color", s_color);
+		depthPeelingShader.update( "view", view);
+		depthPeelingShader.update( "model", turntable.getRotationMatrix() * model);
+		for ( int i = 0; i < num_depth_buffers; i++)
+		{
+			// current fbo to fill
+			FrameBufferObject* currentFBO = depthPeelingBuffers.m_fbos[i];
+			
+			// depth texture from last pass exists
+			if ( i > 0)
+			{
+				FrameBufferObject* beforeFBO = depthPeelingBuffers.m_fbos[i-1];
+				depthPeelingShader.addTexture("lastDepth", beforeFBO->getDepthTextureHandle() );
+			}
+			else
+			{
+				depthPeelingShader.addTexture("lastDepth", currentFBO->getDepthTextureHandle() );
+			}
+			depthPeelingShader.update("peel_level",i);
+
+			depthPeel.setFrameBufferObject(currentFBO);
+
+			// render current fbo
+			depthPeel.render();
+		}
+
+		// compShader.addTexture("colorMap", depthPeelingBuffers.m_fbos[1]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+		// compShader.addTexture("normalMap", depthPeelingBuffers.m_fbos[1]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
+		// compShader.addTexture("positionMap", depthPeelingBuffers.m_fbos[1]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
+
+		// compositing.render();
+
+		showTexture.render();
 
 		ImGui::Render();
 		glDisable(GL_BLEND);

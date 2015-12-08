@@ -8,7 +8,7 @@
 
 class FrameBufferObject
 {
-private:
+protected:
 	GLuint m_frameBufferHandle;
 
 	int m_width;
