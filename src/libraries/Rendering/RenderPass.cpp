@@ -53,7 +53,7 @@ void RenderPass::clearBits()
 {
 	for (unsigned int i = 0; i < m_clearBits.size(); i++)
 	{
-		if (m_clearBits[i] == GL_COLOR_BUFFER_BIT)
+		if (m_clearBits[i] == GL_COLOR_BUFFER_BIT || m_clearBits[i] == GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		{
 			glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
 		}

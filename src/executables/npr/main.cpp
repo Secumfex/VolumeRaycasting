@@ -91,6 +91,7 @@ int main()
 
 	DEBUGLOG->log("FrameBufferObject Creation: depth peeling framebuffers"); DEBUGLOG->indent();
 	RenderPass depthPeel(&depthPeelingShader, depthPeelingBuffers.m_fbos[0] );
+	depthPeel.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	depthPeel.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	depthPeel.addEnable(GL_DEPTH_TEST);
 	DEBUGLOG->outdent();
@@ -108,7 +109,7 @@ int main()
 
 	Quad quad;
 	RenderPass compositing(&compShader, 0);
-	compositing.setClearColor(0.5,0.5,0.5,1.0);
+	compositing.setClearColor(0.5,0.5,0.5,0.0);
 	compositing.addEnable(GL_BLEND);
 	compositing.addRenderable(&quad);
 
