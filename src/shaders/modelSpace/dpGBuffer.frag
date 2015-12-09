@@ -15,6 +15,7 @@ uniform vec4  color;
 uniform float mixTexture;
 uniform sampler2D tex;
 
+uniform vec2 texResolution;
 uniform int peel_level;
 uniform sampler2D lastDepth;
 
@@ -32,11 +33,12 @@ void main(){
 		fragColor = mix(color, texture(tex, VertexOut.texCoord), mixTexture );
 	}
 
-	//TODO check with before depth peel from lastDepth texture
+	// check with before depth peel from lastDepth texture
 	if (peel_level > 0)
 	{
-		vec4 depth = texture(lastDepth, gl_FragCoord.xy);
-		if ( gl_FragCoord.z < depth.r)
+		float depth = texture(lastDepth, gl_FragCoord.xy / texResolution).r;
+
+		if ( gl_FragCoord.z <= depth.r)
 		{
 			discard;
 		}

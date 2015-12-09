@@ -69,7 +69,7 @@ void main() {
         // depth
 
         // rim light strength
-        float rim = pow( 1.0 - max( dot(normal.xyz, eye) , 0.0) , 5);
+        float rim = pow( 1.0 - abs(dot(normal.xyz, eye)) , 5);
 
         fragmentColor = color * ambient 
         + color * diffuse 

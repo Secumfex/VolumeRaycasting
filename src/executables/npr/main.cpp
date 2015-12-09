@@ -27,6 +27,7 @@ static glm::vec4 s_lightPos = glm::vec4(2.0,2.0,2.0,1.0);
 
 static float s_strength = 0.05f;
 
+const glm::vec2 WINDOW_RESOLUTION = glm::vec2(800.0f, 600.0f);
 //////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// MAIN ///////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -40,7 +41,7 @@ int main()
 	//////////////////////////////////////////////////////////////////////////////
 
 	// create window and opengl context
-	auto window = generateWindow(800,600);
+	auto window = generateWindow(WINDOW_RESOLUTION.x,WINDOW_RESOLUTION.y);
 
 	//////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////// RENDERING  ///////////////////////////////////
@@ -67,6 +68,7 @@ int main()
 	for ( int i = 0; i < numObjects; i++)
 	{
 		objects.push_back(new Volume(object_size));
+		// objects.push_back(new Sphere(20,40,object_size));
 		object_size *= 0.75f;
 	}
 	// Volume object(object_size);
@@ -80,7 +82,7 @@ int main()
 	shaderProgram.update("color", s_color);
 
 	DEBUGLOG->log("FrameBufferObject Creation: GBuffer"); DEBUGLOG->indent();
-	FrameBufferObject fbo(getResolution(window).x, getResolution(window).y);
+	FrameBufferObject fbo(WINDOW_RESOLUTION.x, WINDOW_RESOLUTION.y);
 	FrameBufferObject::s_internalFormat  = GL_RGBA32F; // to allow arbitrary values in G-Buffer
 	fbo.addColorAttachments(4); DEBUGLOG->outdent();   // G-Buffer
 	FrameBufferObject::s_internalFormat  = GL_RGBA;	   // restore default
@@ -93,7 +95,7 @@ int main()
 	int num_color_attachments = 4;
 
 	FrameBufferObject::s_internalFormat  = GL_RGBA32F; // to allow arbitrary values in G-Buffer
-	DepthPeelingBuffers depthPeelingBuffers(getResolution(window).x, getResolution(window).y,
+	DepthPeelingBuffers depthPeelingBuffers(WINDOW_RESOLUTION.x, WINDOW_RESOLUTION.y,
 		num_depth_buffers,
 		num_color_attachments);
 	FrameBufferObject::s_internalFormat  = GL_RGBA;	   // restore default
@@ -104,6 +106,7 @@ int main()
 	depthPeelingShader.update("view", view);
 	depthPeelingShader.update("projection", perspective);
 	depthPeelingShader.update("color", s_color);
+	depthPeelingShader.update("texResolution", WINDOW_RESOLUTION);
 	DEBUGLOG->outdent();
 
 	DEBUGLOG->log("FrameBufferObject Creation: depth peeling framebuffers"); DEBUGLOG->indent();
@@ -237,6 +240,10 @@ int main()
         
 		ImGui::Checkbox("auto-rotate", &s_isRotating); // enable/disable rotating volume
 		ImGui::PopItemWidth();
+
+        static int activeDepthPeel=0;
+        ImGui::SliderInt("slider int", &activeDepthPeel, 0, num_depth_buffers-1);
+
         //////////////////////////////////////////////////////////////////////////////
 
 		///////////////////////////// MATRIX UPDATING ///////////////////////////////
@@ -287,13 +294,15 @@ int main()
 			depthPeel.render();
 		}
 
-		// compShader.addTexture("colorMap", depthPeelingBuffers.m_fbos[1]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
-		// compShader.addTexture("normalMap", depthPeelingBuffers.m_fbos[1]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
-		// compShader.addTexture("positionMap", depthPeelingBuffers.m_fbos[1]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
+		// texShader.addTexture("tex", depthPeelingBuffers.m_fbos[activeDepthPeel]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
+		// showTexture.render();
 
-		// compositing.render();
+		compShader.addTexture("colorMap", depthPeelingBuffers.m_fbos[activeDepthPeel]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+		compShader.addTexture("normalMap", depthPeelingBuffers.m_fbos[activeDepthPeel]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
+		compShader.addTexture("positionMap", depthPeelingBuffers.m_fbos[activeDepthPeel]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
 
-		showTexture.render();
+		compositing.render();
+
 
 		ImGui::Render();
 		glDisable(GL_BLEND);
