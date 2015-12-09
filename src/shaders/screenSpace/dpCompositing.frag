@@ -14,7 +14,14 @@ uniform float transparency;
 out vec4 fragmentColor;
 
 void main() {
+
     vec4 position = texture(positionMap, passUV);
+    
+    // if (position.a != 1.0)
+    // {
+    //     discard;
+    // }
+    
     vec4 normal =   texture(normalMap, passUV);
     vec4 color =    texture(colorMap, passUV);
     

@@ -63,12 +63,13 @@ int main()
 	int num_objects = 4;
 	
 	std::vector<Renderable* > objects;
-	for ( int i = 0; i < num_objects; i++)
+	for ( int i = 0; i < num_objects-1; i++)
 	{
 		objects.push_back(new Volume(object_size));
 		// objects.push_back(new Sphere(20,40,object_size));
 		object_size *= 0.75f;
 	}
+	objects.push_back(new Sphere(20,40,object_size));
 
 	/////////////////////// 	Renderpass     ///////////////////////////
 	int num_depth_buffers = 4;
