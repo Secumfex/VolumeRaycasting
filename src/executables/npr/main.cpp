@@ -26,6 +26,7 @@ static glm::vec4 s_color = glm::vec4(0.45, 0.44f, 0.87f, 1.0f); // far : blueish
 static glm::vec4 s_lightPos = glm::vec4(2.0,2.0,2.0,1.0);
 
 static float s_strength = 0.05f;
+static float s_transparency = 0.05f;
 
 const glm::vec2 WINDOW_RESOLUTION = glm::vec2(800.0f, 600.0f);
 //////////////////////////////////////////////////////////////////////////////
@@ -57,42 +58,21 @@ int main()
 	/// perspective projection is experimental; yields weird warping effects due to vertex interpolation of uv-coordinates
 	glm::mat4 perspective = glm::perspective(glm::radians(65.f), getRatio(window), 0.1f, 10.f);
 
-	// create object
-	// Sphere object;
-	// Grid object(10,10,0.1f,0.1f,true);
-	
+	// initial object size (biggest / outer object)
 	float object_size = 1.0f;
+	int num_objects = 4;
 	
 	std::vector<Renderable* > objects;
-	int numObjects = 4;
-	for ( int i = 0; i < numObjects; i++)
+	for ( int i = 0; i < num_objects; i++)
 	{
 		objects.push_back(new Volume(object_size));
 		// objects.push_back(new Sphere(20,40,object_size));
 		object_size *= 0.75f;
 	}
-	// Volume object(object_size);
 
 	/////////////////////// 	Renderpass     ///////////////////////////
-	DEBUGLOG->log("Shader Compilation: GBuffer shader"); DEBUGLOG->indent();
-	ShaderProgram shaderProgram("/modelSpace/GBuffer.vert", "/modelSpace/GBuffer.frag"); DEBUGLOG->outdent();
-	shaderProgram.update("model", model);
-	shaderProgram.update("view", view);
-	shaderProgram.update("projection", perspective);
-	shaderProgram.update("color", s_color);
-
-	DEBUGLOG->log("FrameBufferObject Creation: GBuffer"); DEBUGLOG->indent();
-	FrameBufferObject fbo(WINDOW_RESOLUTION.x, WINDOW_RESOLUTION.y);
-	FrameBufferObject::s_internalFormat  = GL_RGBA32F; // to allow arbitrary values in G-Buffer
-	fbo.addColorAttachments(4); DEBUGLOG->outdent();   // G-Buffer
-	FrameBufferObject::s_internalFormat  = GL_RGBA;	   // restore default
-
-	RenderPass renderPass(&shaderProgram, &fbo);
-	renderPass.addEnable(GL_DEPTH_TEST);
-	renderPass.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	
-	int num_depth_buffers = 3;
-	int num_color_attachments = 4;
+	int num_depth_buffers = 4;
+	int num_color_attachments = 3;
 
 	FrameBufferObject::s_internalFormat  = GL_RGBA32F; // to allow arbitrary values in G-Buffer
 	DepthPeelingBuffers depthPeelingBuffers(WINDOW_RESOLUTION.x, WINDOW_RESOLUTION.y,
@@ -115,31 +95,22 @@ int main()
 	depthPeel.addEnable(GL_DEPTH_TEST);
 	DEBUGLOG->outdent();
 
-	// renderPass.addRenderable(&object);
+	// add objects to depth peeling render pass
 	for (auto r : objects )
 	{
-		renderPass.addRenderable(r);
 		depthPeel.addRenderable(r);
 	}
 
-	DEBUGLOG->log("Shader Compilation: compositing"); DEBUGLOG->indent();
-	// ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/finalCompositing.frag");
-	ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/npr1.frag");
-	compShader.addTexture("colorMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
-	compShader.addTexture("normalMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
-	compShader.addTexture("positionMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
+	// depth peeling compositing shader
+	DEBUGLOG->log("Shader Compilation: depth peeling compositing"); DEBUGLOG->indent();
+	ShaderProgram compShader("/screenSpace/fullscreen.vert", "/screenSpace/dpCompositing.frag");
 	DEBUGLOG->outdent();
 
 	Quad quad;
 	RenderPass compositing(&compShader, 0);
 	compositing.setClearColor(0.5,0.5,0.5,1.0);
-	compositing.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	compositing.addEnable(GL_BLEND);
 	compositing.addRenderable(&quad);
-
-	ShaderProgram texShader("/screenSpace/fullscreen.vert", "/screenSpace/simpleAlphaTexture.frag");
-	RenderPass showTexture(&texShader, 0);
-	texShader.addTexture("tex", depthPeelingBuffers.m_fbos[1]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
-	showTexture.addRenderable(&quad);
 
 	//////////////////////////////////////////////////////////////////////////////
 	///////////////////////    GUI / USER INPUT   ////////////////////////////////
@@ -232,17 +203,13 @@ int main()
 		ImGui_ImplGlfwGL3_NewFrame(); // tell ImGui a new frame is being rendered
 		
 		ImGui::PushItemWidth(-100);
-		if (ImGui::CollapsingHeader("Geometry Shader Settings"))
-    	{
-    		ImGui::ColorEdit4( "color", glm::value_ptr( s_color)); // color mixed at max distance
-	        ImGui::SliderFloat("strength", &s_strength, 0.0f, 2.0f); // influence of color shift
-        }
+
+		ImGui::ColorEdit4( "color", glm::value_ptr( s_color)); // color mixed at max distance
+        ImGui::SliderFloat("strength", &s_strength, 0.0f, 2.0f); // influence of color shift
+        ImGui::SliderFloat("transparency", &s_transparency, 0.0f, 1.0f); // influence of color shift
         
 		ImGui::Checkbox("auto-rotate", &s_isRotating); // enable/disable rotating volume
 		ImGui::PopItemWidth();
-
-        static int activeDepthPeel=0;
-        ImGui::SliderInt("slider int", &activeDepthPeel, 0, num_depth_buffers-1);
 
         //////////////////////////////////////////////////////////////////////////////
 
@@ -257,20 +224,16 @@ int main()
 				
 		////////////////////////  SHADER / UNIFORM UPDATING //////////////////////////
 		// update view related uniforms
-		shaderProgram.update("color", s_color);
-		shaderProgram.update( "view", view);
-		shaderProgram.update( "model", turntable.getRotationMatrix() * model);
+		depthPeelingShader.update( "color", s_color);
+		depthPeelingShader.update( "view", view);
+		depthPeelingShader.update( "model", turntable.getRotationMatrix() * model);
 
 		compShader.update("vLightPos", view * turntable.getRotationMatrix() * s_lightPos);
 		compShader.update("strength", s_strength);
+		compShader.update("transparency", s_transparency);
 		//////////////////////////////////////////////////////////////////////////////
 		
 		////////////////////////////////  RENDERING //// /////////////////////////////
-		renderPass.render();
-
-		depthPeelingShader.update("color", s_color);
-		depthPeelingShader.update( "view", view);
-		depthPeelingShader.update( "model", turntable.getRotationMatrix() * model);
 		for ( int i = 0; i < num_depth_buffers; i++)
 		{
 			// current fbo to fill
@@ -294,19 +257,32 @@ int main()
 			depthPeel.render();
 		}
 
-		// texShader.addTexture("tex", depthPeelingBuffers.m_fbos[activeDepthPeel]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
-		// showTexture.render();
+		// render depth peeling compositing
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		for (int i = num_depth_buffers - 1; i >= 0; i--) // render from back to front
+		{
+			if ( i == num_depth_buffers - 1)
+			{
+				compositing.addClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+			}
+			else if ( i == num_depth_buffers - 2)
+			{
+				compositing.removeClearBit(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+			}
 
-		compShader.addTexture("colorMap", depthPeelingBuffers.m_fbos[activeDepthPeel]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
-		compShader.addTexture("normalMap", depthPeelingBuffers.m_fbos[activeDepthPeel]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
-		compShader.addTexture("positionMap", depthPeelingBuffers.m_fbos[activeDepthPeel]->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
+			auto buffer = depthPeelingBuffers.m_fbos[i];
 
-		compositing.render();
+			// set texture references, execute compositing
+			compShader.addTexture("colorMap", buffer->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+			compShader.addTexture("normalMap", buffer->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
+			compShader.addTexture("positionMap", buffer->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
 
+			compositing.render();
+		}
 
 		ImGui::Render();
 		glDisable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ZERO); // this is altered by ImGui::Render(), so reset it every frame
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // this is altered by ImGui::Render(), so reset it every frame
 		//////////////////////////////////////////////////////////////////////////////
 
 	});
