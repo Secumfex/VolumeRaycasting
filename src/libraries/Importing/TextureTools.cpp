@@ -1,4 +1,7 @@
 #include <iostream>
+
+#define STB_IMAGE_IMPLEMENTATION
+
 #include "stb_image.h"
 #include "TextureTools.h"
 
@@ -14,6 +17,7 @@ namespace TextureTools {
     	std::string line;
 
     	int width, height, bytesPerPixel;
+        stbi_set_flip_vertically_on_load(true);
         unsigned char *data = stbi_load(fileName.c_str(), &width, &height, &bytesPerPixel, 0);
 
         if(data == NULL){

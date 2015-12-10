@@ -12,6 +12,7 @@ out vec4 fragmentColor;
 
 void main() {
     vec4 position = texture(positionMap, passUV);
+    if (position.a == 0.0) { discard; }
     vec4 normal =   texture(normalMap, passUV);
     vec4 color =    texture(colorMap, passUV);
     
@@ -40,7 +41,7 @@ void main() {
     // }
     // glow /= strength * strength * 4;
 
-    fragmentColor = color * ambient + color * diffuse + vec4(1,1,1,1) * specular;
+    fragmentColor = vec4(color.rgb * ambient + color.rgb * diffuse + vec3(specular), color.a);
     
     // fragmentColor += glow;
     // fragmentColor = vec4(nReflection.rgb, 1.0);
