@@ -70,6 +70,7 @@ int main()
 	
 	// Billboard Texture
 	GLuint bbTexture = TextureTools::loadTexture( RESOURCES_PATH "/neon_sign.png");
+	GLuint distortionTex = TextureTools::loadTexture( RESOURCES_PATH "/normal_water.jpg");
 
 	DEBUGLOG->log("Setup: model matrices"); DEBUGLOG->indent();
 	std::vector<glm::mat4 > modelMatrices;
@@ -128,9 +129,11 @@ int main()
 	ssrShader.update("bbWidth",   bb_width);
 	ssrShader.update("bbHeight",  bb_height);
 	ssrShader.addTexture("bbTex", bbTexture);
+	ssrShader.addTexture("distortionTex", distortionTex);
 
 	ssrShader.addTexture("positionMap", fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2));
 	ssrShader.addTexture("normalMap",   fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1));
+	ssrShader.addTexture("uvMap", 		fbo.getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT3));
 
 	DEBUGLOG->log("FrameBufferObject Creation: SSR"); DEBUGLOG->indent();
 	FrameBufferObject ssrFBO(getResolution(window).x, getResolution(window).y);

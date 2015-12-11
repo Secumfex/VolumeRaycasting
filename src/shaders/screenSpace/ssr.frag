@@ -4,11 +4,13 @@ in vec2 passUV;
 
 uniform sampler2D normalMap;
 uniform sampler2D positionMap;
+uniform sampler2D uvMap;
 
 uniform mat4 view;
 
 uniform mat4 bbModel;
 uniform sampler2D bbTex;
+uniform sampler2D distortionTex;
 
 uniform float bbWidth;
 uniform float bbHeight;
@@ -29,6 +31,7 @@ vec3 intersectPlane( vec3 p, vec3 d, vec3 v1, vec3 v2, vec3 v3)
 void main() {
     vec4 position = texture(positionMap, passUV);
     vec4 normal =   texture(normalMap, passUV);
+    vec2 uvCoords =       texture(uvMap, passUV).xy;
     
     if (position.a != 0.0)
     {
@@ -48,10 +51,13 @@ void main() {
         vert2 = ( view * bbModel * vec4(vert2,1.0) ).xyz;
 
         vec3 uv = intersectPlane(position.xyz, nReflection, vert2, vert0, vert1);
+        uv.z = 1.0 - uv.z; //flip v coordinate
 
         if (uv.y <= 1.0 && uv.z <= 1.0 && uv.y >= 0.0 && uv.z >= 0.0 && uv.x < -0.001)
         {
-            uv.z = 1.0 - uv.z; //flip v coordinate
+            // distort UVs
+            uv.yz = uv.yz + 0.2 * (texture( distortionTex, uvCoords).xy * 2.0 - 1.0);
+            
             vec4 texColor = texture(bbTex, uv.yz);
             float brightness = max(texColor.r, max(texColor.g, texColor.b));
             fragmentColor = vec4(texColor.rgb, brightness * strength);
