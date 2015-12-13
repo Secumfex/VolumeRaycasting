@@ -27,7 +27,7 @@ void main()
 	vec4 col;
 	if (blendColor != 0.0)
 	{
-		vec4 tex = texture(tex, vec2(passUVCoord.x, 1.0 - passUVCoord.y));
+		vec4 tex = texture(tex, vec2(passUVCoord.x, passUVCoord.y));
 		col = mix(color, tex, blendColor);
 	}
 	else{
